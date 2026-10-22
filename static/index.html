@@ -1091,6 +1091,102 @@
                 </div>
             </div>
 
+            <!-- DEDICATED PARTS LIST & BILL OF MATERIALS (BOM) CARD -->
+            <div class="wiring-card full-width" style="margin-top:20px; border-color: var(--accent-yellow);">
+                <div class="wiring-card-header">
+                    <span class="wiring-badge gpio" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;">PARTS LIST PAGE</span>
+                    <h3 style="color: #fbbf24;">📦 4WD ROVER SYSTEM PARTS LIST & BILL OF MATERIALS (BOM)</h3>
+                </div>
+                <div class="wiring-table-wrapper" style="overflow-x:auto;">
+                    <table class="wiring-table font-mono" style="width:100%; font-size:0.85rem; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background: rgba(30,41,59,0.8); color: var(--accent-cyan);">
+                                <th style="padding:10px; text-align:center; width: 50px;">Item</th>
+                                <th style="padding:10px; text-align:left;">Component / Part Name</th>
+                                <th style="padding:10px; text-align:left;">Specification / Model</th>
+                                <th style="padding:10px; text-align:center; width: 50px;">Qty</th>
+                                <th style="padding:10px; text-align:left;">Subsystem Role & Interface</th>
+                                <th style="padding:10px; text-align:left;">Power / Voltage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px; color:var(--accent-cyan);"><strong>Raspberry Pi 4 / 5</strong></td>
+                                <td style="padding:8px;">4GB / 8GB RAM Model B</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Master Server, Gemini AI, Motor Controls & Sonar VAD</td>
+                                <td style="padding:8px;">5V @ 3A DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>2</strong></td>
+                                <td style="padding:8px; color:#f87171;"><strong>4WD Metal Chassis Kit</strong></td>
+                                <td style="padding:8px;">Aluminum Alloy Frame with 4 Wheels</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Rover Mechanical Body Frame with 4 Independent Motors</td>
+                                <td style="padding:8px;">6V - 12V DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>3</strong></td>
+                                <td style="padding:8px; color:#fbbf24;"><strong>L298N Dual H-Bridge Drivers</strong></td>
+                                <td style="padding:8px;">Dual-Channel DC Motor Controllers</td>
+                                <td style="padding:8px; text-align:center;"><strong>3</strong></td>
+                                <td style="padding:8px;">Driver 1 (Left Wheels), Driver 2 (Right Wheels), Driver 3 (Head/Neck)</td>
+                                <td style="padding:8px;">6V - 12V DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>4</strong></td>
+                                <td style="padding:8px; color:#4ade80;"><strong>HC-SR04 Ultrasonic Sonar Sensors</strong></td>
+                                <td style="padding:8px;">Ultrasonic Distance Sensors (4-Pin)</td>
+                                <td style="padding:8px; text-align:center;"><strong>4</strong></td>
+                                <td style="padding:8px;">Front, Rear, Left, and Right Obstacle Avoidance Sonar</td>
+                                <td style="padding:8px;">5V DC Logic</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>5</strong></td>
+                                <td style="padding:8px; color:#a78bfa;"><strong>Black Animatronic Head Assembly</strong></td>
+                                <td style="padding:8px;">Robotic Head with Moving Mouth & Neck</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Head with Mouth DC Motor (Ch 1) and Pulsating Neck DC Motor (Ch 2)</td>
+                                <td style="padding:8px;">6V DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>6</strong></td>
+                                <td style="padding:8px; color:var(--accent-cyan);"><strong>Pan/Tilt Camera Gimbal Servos</strong></td>
+                                <td style="padding:8px;">SG90 / MG90S Micro Servos</td>
+                                <td style="padding:8px; text-align:center;"><strong>2</strong></td>
+                                <td style="padding:8px;">2-DOF Pan & Tilt Camera Platform Servos</td>
+                                <td style="padding:8px;">5V DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>7</strong></td>
+                                <td style="padding:8px; color:#fbbf24;"><strong>Wide-Angle HD Web Camera</strong></td>
+                                <td style="padding:8px;">USB Webcam / Pi CSI Camera</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Live Video Stream & Gemini AI Computer Vision Input</td>
+                                <td style="padding:8px;">USB 5V DC</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                                <td style="padding:8px; text-align:center;"><strong>8</strong></td>
+                                <td style="padding:8px; color:#4ade80;"><strong>LiPo Battery Power Supply</strong></td>
+                                <td style="padding:8px;">2S 7.4V or 3S 11.1V LiPo Battery</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Main High-Current Power Source for Rover Motors & Pi UBEC</td>
+                                <td style="padding:8px;">7.4V - 11.1V DC</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px; text-align:center;"><strong>9</strong></td>
+                                <td style="padding:8px; color:#94a3b8;"><strong>5V 10A UBEC Buck Converter</strong></td>
+                                <td style="padding:8px;">Step-Down Voltage Regulator</td>
+                                <td style="padding:8px; text-align:center;"><strong>1</strong></td>
+                                <td style="padding:8px;">Converts LiPo Battery Voltage to Clean +5V DC for Pi & Servos</td>
+                                <td style="padding:8px;">5V @ 10A DC Out</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Print Footer Notice -->
             <div class="print-doc-footer">
                 <p>4WD Rover Hardware Control Workbench • Electrical Wiring & Pinout Guide • Confidential / Engineering Reference</p>

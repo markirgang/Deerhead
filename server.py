@@ -282,7 +282,15 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             super().do_HEAD()
 
     def do_GET(self):
-        if self.path.startswith("/api/status"):
+        if self.path.startswith("/api/export-pdf"):
+            pdf_bytes = self.generate_schematic_pdf()
+            self.send_response(200)
+            self.send_header('Content-type', 'application/pdf')
+            self.send_header('Content-Disposition', 'attachment; filename="4WD_Rover_Wiring_Schematic.pdf"')
+            self.end_headers()
+            self.wfile.write(pdf_bytes)
+
+        elif self.path.startswith("/api/status"):
             self.send_json({"status": "online", "device": "Raspberry Pi 4WD Rover with Robotic Head", "python_version": sys.version})
         elif self.path.startswith("/api/poses"):
             self.send_json(SAVED_POSES)
@@ -546,6 +554,96 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(data).encode('utf-8'))
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
+
+    def generate_schematic_pdf(self):
+        import io
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#003366'), spaceAfter=4)
+        subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontName='Helvetica-Oblique', fontSize=9, textColor=colors.HexColor('#444444'), spaceAfter=10)
+        heading_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#0055a5'), spaceBefore=8, spaceAfter=4)
+        cell_style = ParagraphStyle('TableCell', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#111111'))
+        header_cell_style = ParagraphStyle('TableHeaderCell', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white)
+
+        story = [
+            Paragraph("🤖 4WD ROVER WITH ANIMATRONIC HEAD - MASTER WIRING SCHEMATIC", title_style),
+            Paragraph("Page 1 of 2: Pinout Guide for Raspberry Pi 4/5, 3x L298N Motor Controllers, 4x HC-SR04 Sonar & Power Rail", subtitle_style),
+            HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8),
+            Paragraph("⚡ Core System Hardware Overview", heading_style)
+        ]
+
+        overview_data = [
+            [Paragraph("Module / Component", header_cell_style), Paragraph("Hardware Role & Signals", header_cell_style), Paragraph("Power Requirements", header_cell_style)],
+            [Paragraph("<b>Raspberry Pi 4 / 5</b>", cell_style), Paragraph("Executes master server, Gemini AI, L298N motor drivers, Sonar VAD & Pan/Tilt Servos", cell_style), Paragraph("+5V @ 3A DC (UBEC)"),],
+            [Paragraph("<b>L298N Driver #1 (Front)</b>", cell_style), Paragraph("Front-Left Wheel (GPIO 18 ENA, 23, 24) and Front-Right Wheel (GPIO 19 ENB, 25, 8)", cell_style), Paragraph("+7.4V - +11.1V LiPo Rail"),],
+            [Paragraph("<b>L298N Driver #2 (Rear)</b>", cell_style), Paragraph("Rear-Left Wheel (GPIO 12 ENA, 16, 20) and Rear-Right Wheel (GPIO 13 ENB, 21, 26)", cell_style), Paragraph("+7.4V - +11.1V LiPo Rail"),],
+            [Paragraph("<b>L298N Driver #3 (Head/Neck)</b>", cell_style), Paragraph("Mouth DC Motor (GPIO 17 ENA, 27, 22) and Pulsating Neck Motor (GPIO 4 ENB, 14, 15)", cell_style), Paragraph("+6V DC Power Rail"),],
+            [Paragraph("<b>HC-SR04 Sonar (4x)</b>", cell_style), Paragraph("Front (GPIO 5/6), Rear (GPIO 13/19), Left (GPIO 26/21), Right (GPIO 20/16) Ultrasonic Distance", cell_style), Paragraph("+5V DC Logic VCC"),]
+        ]
+        t_overview = Table(overview_data, colWidths=[150, 430, 140])
+        t_overview.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f5f8ff')])
+        ]))
+        story.append(t_overview)
+
+        # PAGE 2: BILL OF MATERIALS / PARTS LIST
+        story.append(PageBreak())
+        story.append(Paragraph("📦 4WD ROVER WITH ANIMATRONIC HEAD - BILL OF MATERIALS (PARTS LIST)", title_style))
+        story.append(Paragraph("Page 2 of 2: Complete Parts Specification, Quantities, Power Requirements & Subsystem Roles", subtitle_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
+
+        bom_rows = [[
+            Paragraph("Item #", header_cell_style),
+            Paragraph("Component / Part Name", header_cell_style),
+            Paragraph("Specification / Model", header_cell_style),
+            Paragraph("Qty", header_cell_style),
+            Paragraph("Subsystem Role & Interface", header_cell_style),
+            Paragraph("Power / Voltage", header_cell_style)
+        ]]
+
+        bom_data_items = [
+            ("1", "Raspberry Pi 4 or 5", "4GB / 8GB RAM Model B", "1", "Master Server, Gemini AI, Motor Controls & Sonar VAD", "5V @ 3A DC"),
+            ("2", "4WD Metal Chassis Kit", "Aluminum Alloy Frame with 4 Wheels", "1", "Rover Mechanical Body Frame with 4 Independent Motors", "6V - 12V DC"),
+            ("3", "L298N Dual H-Bridge Drivers", "Dual-Channel DC Motor Controllers", "3", "Driver 1 (Left Wheels), Driver 2 (Right Wheels), Driver 3 (Head/Neck)", "6V - 12V DC"),
+            ("4", "HC-SR04 Ultrasonic Sonar Sensors", "Ultrasonic Distance Sensors (4-Pin)", "4", "Front, Rear, Left, and Right Obstacle Avoidance Sonar", "5V DC Logic"),
+            ("5", "Black Animatronic Head Assembly", "Robotic Head with Moving Mouth & Neck", "1", "Head with Mouth DC Motor (Ch 1) and Pulsating Neck DC Motor (Ch 2)", "6V DC"),
+            ("6", "Pan/Tilt Camera Gimbal Servos", "SG90 / MG90S Micro Servos", "2", "2-DOF Pan & Tilt Camera Platform Servos", "5V DC"),
+            ("7", "Wide-Angle HD Web Camera", "USB Webcam / Pi CSI Camera", "1", "Live Video Stream & Gemini AI Computer Vision Input", "USB 5V DC"),
+            ("8", "LiPo Battery Power Supply", "2S 7.4V or 3S 11.1V LiPo Battery", "1", "Main High-Current Power Source for Rover Motors & Pi UBEC", "7.4V - 11.1V DC"),
+            ("9", "5V 10A UBEC Buck Converter", "Step-Down Voltage Regulator", "1", "Converts LiPo Battery Voltage to Clean +5V DC for Pi & Servos", "5V @ 10A DC Out")
+        ]
+
+        for item in bom_data_items:
+            bom_rows.append([
+                Paragraph(f"<b>{item[0]}</b>", cell_style),
+                Paragraph(f"<b>{item[1]}</b>", cell_style),
+                Paragraph(item[2], cell_style),
+                Paragraph(f"<b>{item[3]}</b>", cell_style),
+                Paragraph(item[4], cell_style),
+                Paragraph(item[5], cell_style)
+            ])
+
+        t_bom = Table(bom_rows, colWidths=[40, 130, 130, 35, 255, 130])
+        t_bom.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0055a5')),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#dddddd')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f8fafd')])
+        ]))
+        story.append(t_bom)
+
+        doc.build(story)
+        return buffer.getvalue()
 
     def generate_hardware_script(self, data):
         script = f'''#!/usr/bin/env python3
