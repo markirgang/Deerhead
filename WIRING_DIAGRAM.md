@@ -1,7 +1,7 @@
 # 🤖 4WD ROVER WITH ANIMATRONIC HEAD - HARDWARE WIRING DIAGRAM
-## SYSTEM SCHEMATIC GUIDE & PCA9685 MOSFET LIGHTING SPECIFICATIONS
+## SYSTEM SCHEMATIC GUIDE & IRLZ44N MOSFET LIGHTING SPECIFICATIONS
 
-This document details all physical hardware connections, Raspberry Pi GPIO pin mappings, 3x L298N motor drivers, 4x HC-SR04 ultrasonic sonar sensors, and PCA9685 12-bit PWM channel assignments driving 3.3V gate / 12V power supply MOSFET power transistors for DC headlights, underglow LEDs, and tail lights.
+This document details all physical hardware connections, Raspberry Pi GPIO pin mappings, 3x L298N motor drivers, 4x HC-SR04 ultrasonic sonar sensors, and PCA9685 12-bit PWM channel assignments driving IRLZ44N N-Channel Logic-Level MOSFET power transistors (with 220Ω series gate resistors and 10kΩ pull-down resistors) for 12V DC headlights, underglow LEDs, and tail lights.
 
 ---
 
@@ -11,7 +11,7 @@ This document details all physical hardware connections, Raspberry Pi GPIO pin m
 +-----------------------------------------------------------------------------------+
 |                                  MAIN POWER SUPPLY                                |
 |  7.4V / 11.1V LiPo Battery + 5V 10A UBEC Buck Converter                           |
-|  +12V DC (MOSFET Headlights & Underglow LEDs)     +5V @ 3A DC (Raspberry Pi Logic)|
+|  +12V DC (IRLZ44N MOSFET Headlights & Underglow LEDs)  +5V @ 3A DC (Raspberry Pi)|
 +------------------------------------------+----------------------------------------+
                                            |
                                            v
@@ -30,17 +30,16 @@ This document details all physical hardware connections, Raspberry Pi GPIO pin m
 | (I2C Addr: 0x40)   |  | (#1, #2, #3)       |  | (Front, Rear, Left, Right)        |
 +-----+--------------+  +----+---------------+  +-----------------------------------+
       |                      |
-      | (PCA9685 PWM to MOSFETs: 3.3V Gate / 12V Power)
-      v                      v
+      v (PCA9685 PWM to IRLZ44N MOSFETs: 3.3V Gate / 12V Power)
 +-----+----------------------+------------------------------------------------------+
 |                       4WD ROVER ACTUATORS & DC LIGHTS                             |
 | - 4WD Wheel Drive Motors: Front-Left, Front-Right, Rear-Left, Rear-Right          |
 | - Black Animatronic Head: Mouth DC Motor (L298 #3 Ch 1) & Neck Motor (L298 #3 Ch 2) |
 | - 2-DOF Pan/Tilt Camera Gimbal: PCA Ch 0 (Pan Servo) & PCA Ch 1 (Tilt Servo)      |
-| - PCA9685 -> 3.3V Gate / 12V Power MOSFET DC Rover Lights:                        |
-|   * PCA Ch 2: Front High-Power Headlights MOSFET PWM Dimmer (12V DC)              |
-|   * PCA Ch 3: Underglow RGB LED Strips MOSFET PWM Dimmer (12V DC)                 |
-|   * PCA Ch 4: Rear Brake / Tail Lights MOSFET PWM Dimmer (12V DC)                 |
+| - IRLZ44N Logic-Level MOSFET 12V DC Rover Lights (220Ω Gate Resistor / 10kΩ GND): |
+|   * PCA Ch 2 -> 220Ω -> Gate IRLZ44N #1 -> 12V High-Power Front Headlights (-)    |
+|   * PCA Ch 3 -> 220Ω -> Gate IRLZ44N #2 -> 12V Underglow RGB LED Strips (-)      |
+|   * PCA Ch 4 -> 220Ω -> Gate IRLZ44N #3 -> 12V Rear Tail / Brake Lights (-)        |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -82,17 +81,31 @@ This document details all physical hardware connections, Raspberry Pi GPIO pin m
 | :---: | :--- | :--- | :---: |
 | **Ch 0** | Camera Gimbal Pan Servo | Camera Horizontal Pan Servo | 500μs - 2500μs (5V) |
 | **Ch 1** | Camera Gimbal Tilt Servo | Camera Vertical Tilt Servo | 500μs - 2500μs (5V) |
-| **Ch 2** | Front Headlights MOSFET | 3.3V Gate MOSFET -> 12V High-Power Front Headlights | 0% - 100% PWM (12V) |
-| **Ch 3** | Underglow RGB LEDs MOSFET | 3.3V Gate MOSFET -> 12V Underglow RGB LED Strips | 0% - 100% PWM (12V) |
-| **Ch 4** | Rear Brake Lights MOSFET | 3.3V Gate MOSFET -> 12V Rear Tail / Brake Lights | 0% - 100% PWM (12V) |
+| **Ch 2** | Front Headlights MOSFET | **220Ω Gate Resistor (10kΩ GND) -> IRLZ44N -> 12V Headlights (-)** | 0% - 100% PWM (12V) |
+| **Ch 3** | Underglow RGB LEDs MOSFET | **220Ω Gate Resistor (10kΩ GND) -> IRLZ44N -> 12V RGB LEDs (-)** | 0% - 100% PWM (12V) |
+| **Ch 4** | Rear Brake Lights MOSFET | **220Ω Gate Resistor (10kΩ GND) -> IRLZ44N -> 12V Brake Lights (-)** | 0% - 100% PWM (12V) |
 
 ---
 
-## 💡 3. PCA9685-DRIVEN MOSFET DC LIGHTING & POWER DISTRIBUTION
+## ⚡ 3. IRLZ44N MOSFET LIGHTING CIRCUIT SCHEMATIC (GEMINI AI SPECIFICATION)
 
-1. **Dimmable DC Rover Lights (PCA9685 -> 3.3V Gate / 12V Power MOSFETs):**
-   - ALL DC rover lights are driven by **PCA9685 12-bit PWM channels** controlling **3.3V gate / 12V power supply MOSFET power transistors** (`PCA Ch 2` Front Headlights, `PCA Ch 3` Underglow LEDs, `PCA Ch 4` Rear Brake Lights).
-   - Enables full 12-bit PWM brightness control, soft pulse fading, headlights dimming, and braking pulses.
-
-2. **Common Ground:**
-   - Connect Raspberry Pi GND, PCA9685 GND, L298N GND, MOSFET source GND, and Power Supply GND together to a shared common ground bus.
+```
+             PCA9685 PWM Output Channel Pin (PCA Ch 2 / Ch 3 / Ch 4)
+                                |
+                                |
+                             [220Ω Series Gate Resistor]
+                                |
+                                +-------------------+
+                                |                   |
+                          (Gate - Pin 1)     [10kΩ Pull-Down]
+                          IRLZ44N MOSFET           |
+                         +--------------+           |
+                         |  G    D    S |           |
+                         +--|----|----|-+           |
+                            |    |    +-------------+----> Raspberry Pi GND &
+                            |    |                         12V Power Supply (-) GND
+                            |    |
+                            |    +-----------------------> 12V DC Light (-) Negative Wire
+                            |
+                     12V Light (+) Positive Wire --------> +12V DC Power Supply (+) Rail
+```
