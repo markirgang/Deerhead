@@ -669,7 +669,7 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
         ]]
 
         pca_items = [
-            ("I2C Header", "SDA / SCL / VCC / GND", "Raspberry Pi GPIO 2 & 3", "I2C Serial Communication Bus (Addr: 0x40)", "3.3V / 5V Logic"),
+            ("I2C Header", "SDA / SCL / VCC / GND", "Raspberry Pi GPIO 2, 3 & 3.3V Pin 1", "I2C Serial Communication Bus (Addr: 0x40)", "3.3V DC VCC Logic"),
             ("Ext Power V+", "V+ Screw Terminal", "5V 10A UBEC Regulator", "High-Current Servo & MOSFET Power Rail", "5V DC @ 10A"),
             ("Channel 0", "PWM Servo Out", "Camera Gimbal Pan Servo", "Camera Horizontal Pan Servo", "5V Servo Power"),
             ("Channel 1", "PWM Servo Out", "Camera Gimbal Tilt Servo", "Camera Vertical Tilt Servo", "5V Servo Power"),
