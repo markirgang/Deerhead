@@ -718,7 +718,8 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             ("6", "Pan/Tilt Camera Gimbal Servos", "SG90 / MG90S Micro Servos", "2", "2-DOF Pan & Tilt Camera Platform Servos", "5V DC"),
             ("7", "Wide-Angle HD Web Camera", "USB Webcam / Pi CSI Camera", "1", "Live Video Stream & Gemini AI Computer Vision Input", "USB 5V DC"),
             ("8", "LiPo Battery Power Supply", "2S 7.4V or 3S 11.1V LiPo Battery", "1", "Main High-Current Power Source for Rover Motors & Pi UBEC", "7.4V - 11.1V DC"),
-            ("9", "5V 10A UBEC Buck Converter", "Step-Down Voltage Regulator", "1", "Converts LiPo Battery Voltage to Clean +5V DC for Pi & Servos", "5V @ 10A DC Out")
+            ("9", "5V 10A UBEC Buck Converter", "Step-Down Voltage Regulator", "1", "Converts LiPo Battery Voltage to Clean +5V DC for Pi & Servos", "5V @ 10A DC Out"),
+            ("10", "IRLZ44N Logic-Level MOSFETs", "Discrete TO-220 N-Ch MOSFETs with 220Ω Gate Resistor & 22kΩ GND Pull-Down", "3", "Direct Pi GPIO PWM Dimmers for 12V Headlights, Underglow RGB, and Brake Lights", "3.3V DC PWM Gate / 12V DC Load")
         ]
 
         for item in bom_data_items:
@@ -740,6 +741,22 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f8fafd')])
         ]))
         story.append(t_bom)
+
+        # --- PAGE 4: OPERATING INSTRUCTIONS & SAFETY MANUAL ---
+        story.append(PageBreak())
+        story.append(Paragraph("📖 4WD ROVER OPERATING MANUAL & SAFETY GUIDE", title_style))
+        story.append(Paragraph("Page 4 of 4: Comprehensive Driving Instructions, Autonomous Avoidance, Gemini AI & Electrical Safety Rules", subtitle_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
+
+        guide_style = ParagraphStyle('GuideText', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#111111'), spaceAfter=6)
+
+        story.append(Paragraph("⚡ 1. Power Supply & Electrical Safety Rules", heading_style))
+        story.append(Paragraph("<b>• Common Reference Ground Rail:</b> Connect Raspberry Pi GND, L298N GND, MOSFET source GND, and LiPo Battery (-) GND together to a shared common ground bus.", guide_style))
+        story.append(Paragraph("<b>• Discrete IRLZ44N MOSFET Wiring:</b> Connect each Pi GPIO PWM pin (GPIO 5 Headlights, GPIO 6 Underglow, GPIO 11 Brake Lights) through a <b>220Ω series resistor</b> to the MOSFET Gate (Pin 1) to protect the Pi pin. Connect a <b>22kΩ pull-down resistor</b> from Gate to GND to prevent flickering during bootup. Connect 12V DC Light (-) to Drain (Pin 2) and Source (Pin 3) to Common GND.", guide_style))
+
+        story.append(Paragraph("🤖 2. 4WD Drive Kinematics & Animatronic Head", heading_style))
+        story.append(Paragraph("<b>• 4 Independent Wheel Channels:</b> Driven across 2 L298N dual H-bridge motor drivers (L298 #1 Ch 1 FL Wheel, L298 #1 Ch 2 FR Wheel, L298 #2 Ch 1 RL Wheel, L298 #2 Ch 2 RR Wheel). L298 #3 drives the Animatronic Head mouth and neck DC motors.", guide_style))
+        story.append(Paragraph("<b>• PCA9685 Servos ONLY:</b> PCA9685 Channels 0 & 1 drive the 2-DOF Pan/Tilt Camera Gimbal servos.", guide_style))
 
         doc.build(story)
         return buffer.getvalue()
