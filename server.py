@@ -594,11 +594,113 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f5f8ff')])
         ]))
         story.append(t_overview)
+        story.append(Spacer(1, 10))
 
-        # PAGE 2: BILL OF MATERIALS / PARTS LIST
+        # --- PAGE 2: FRITZING-STYLE VISUAL PINOUT DIAGRAM PAGE ---
+        story.append(PageBreak())
+        story.append(Paragraph("🍓 FRITZING-STYLE RASPBERRY PI GPIO & PCA9685 PINOUT DIAGRAM", title_style))
+        story.append(Paragraph("Page 2 of 3: Visual Labeled Hardware Pinout Diagrams for Raspberry Pi 40-Pin Header, PCA9685 Board & Motor Drivers", subtitle_style))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
+
+        story.append(Paragraph("📌 Raspberry Pi 40-Pin GPIO Header (Dual-Row Fritzing-Style Pin Layout)", heading_style))
+
+        rpi_header_rows = [[
+            Paragraph("Odd Pin (Left)", header_cell_style),
+            Paragraph("BCM Signal / Function", header_cell_style),
+            Paragraph("Pin #", header_cell_style),
+            Paragraph("Pin #", header_cell_style),
+            Paragraph("BCM Signal / Function", header_cell_style),
+            Paragraph("Even Pin (Right)", header_cell_style)
+        ]]
+
+        rpi_pin_pairs = [
+            ("3.3V Power - Logic Ref", "Pin 1", "Pin 2", "5.0V Power - Logic VCC"),
+            ("GPIO 2 (SDA1) - I2C Data", "Pin 3", "Pin 4", "5.0V Power - Logic VCC"),
+            ("GPIO 3 (SCL1) - I2C Clock", "Pin 5", "Pin 6", "Ground (GND) - Common GND"),
+            ("GPIO 4 - L298 #3 ENB (Neck PWM)", "Pin 7", "Pin 8", "GPIO 14 (TX) - L298 #3 IN3 (Neck)"),
+            ("Ground (GND) - Common GND", "Pin 9", "Pin 10", "GPIO 15 (RX) - L298 #3 IN4 (Neck)"),
+            ("GPIO 17 - L298 #3 ENA (Mouth PWM)", "Pin 11", "Pin 12", "GPIO 18 (PWM) - L298 #1 ENA (FL Wheel)"),
+            ("GPIO 27 - L298 #3 IN1 (Mouth)", "Pin 13", "Pin 14", "Ground (GND) - Common GND"),
+            ("GPIO 22 - L298 #3 IN2 (Mouth)", "Pin 15", "Pin 16", "GPIO 23 - L298 #1 IN1 (FL Wheel)"),
+            ("3.3V Power", "Pin 17", "Pin 18", "GPIO 24 - L298 #1 IN2 (FL Wheel)"),
+            ("GPIO 10 - Sonar Front Trig", "Pin 19", "Pin 20", "Ground (GND) - Common GND"),
+            ("GPIO 9 - Sonar Front Echo", "Pin 21", "Pin 22", "GPIO 25 - L298 #1 IN3 (FR Wheel)"),
+            ("GPIO 11 - Sonar Rear Trig", "Pin 23", "Pin 24", "GPIO 8 - L298 #1 IN4 (FR Wheel)"),
+            ("Ground (GND)", "Pin 25", "Pin 26", "GPIO 7"),
+            ("GPIO 0 (ID_SD)", "Pin 27", "Pin 28", "GPIO 1 (ID_SC)"),
+            ("GPIO 5 - Sonar Left Trig", "Pin 29", "Pin 30", "Ground (GND) - Common GND"),
+            ("GPIO 6 - Sonar Left Echo", "Pin 31", "Pin 32", "GPIO 12 (PWM) - L298 #2 ENA (RL Wheel)"),
+            ("GPIO 13 (PWM) - L298 #2 ENB (RR)", "Pin 33", "Pin 34", "Ground (GND) - Common GND"),
+            ("GPIO 19 (PWM) - L298 #1 ENB (FR)", "Pin 35", "Pin 36", "GPIO 16 - L298 #2 IN1 (RL Wheel)"),
+            ("GPIO 26 - L298 #2 IN4 (RR Wheel)", "Pin 37", "Pin 38", "GPIO 20 - L298 #2 IN2 (RL Wheel)"),
+            ("Ground (GND)", "Pin 39", "Pin 40", "GPIO 21 - L298 #2 IN3 (RR Wheel)")
+        ]
+
+        for left_sig, left_p, right_p, right_sig in rpi_pin_pairs:
+            rpi_header_rows.append([
+                Paragraph(f"<b>{left_sig}</b>", cell_style),
+                Paragraph(f"<code>{left_sig.split(' - ')[0]}</code>", cell_style),
+                Paragraph(f"<b>{left_p}</b>", cell_style),
+                Paragraph(f"<b>{right_p}</b>", cell_style),
+                Paragraph(f"<code>{right_sig.split(' - ')[0]}</code>", cell_style),
+                Paragraph(f"<b>{right_sig}</b>", cell_style)
+            ])
+
+        t_rpi = Table(rpi_header_rows, colWidths=[150, 100, 45, 45, 100, 150])
+        t_rpi.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+            ('BACKGROUND', (2,1), (2,-1), colors.HexColor('#e6f2ff')),
+            ('BACKGROUND', (3,1), (3,-1), colors.HexColor('#e6f2ff'))
+        ]))
+        story.append(t_rpi)
+        story.append(Spacer(1, 10))
+
+        # PCA9685 Fritzing Pinout Table
+        story.append(Paragraph("🎛️ PCA9685 16-Channel PWM Servo & MOSFET Driver (Pinout Diagram & Signal Map)", heading_style))
+        pca_rows = [[
+            Paragraph("Terminal / Channel", header_cell_style),
+            Paragraph("Signal Type", header_cell_style),
+            Paragraph("Target Module Connected", header_cell_style),
+            Paragraph("Function Description", header_cell_style),
+            Paragraph("Output Voltage / Power", header_cell_style)
+        ]]
+
+        pca_items = [
+            ("I2C Header", "SDA / SCL / VCC / GND", "Raspberry Pi GPIO 2 & 3", "I2C Serial Communication Bus (Addr: 0x40)", "3.3V / 5V Logic"),
+            ("Ext Power V+", "V+ Screw Terminal", "5V 10A UBEC Regulator", "High-Current Servo & MOSFET Power Rail", "5V DC @ 10A"),
+            ("Channel 0", "PWM Servo Out", "Camera Gimbal Pan Servo", "Camera Horizontal Pan Servo", "5V Servo Power"),
+            ("Channel 1", "PWM Servo Out", "Camera Gimbal Tilt Servo", "Camera Vertical Tilt Servo", "5V Servo Power"),
+            ("Channel 2", "PWM Dimmer Out", "Front Headlights MOSFET", "3.3V Gate MOSFET -> 12V High-Power Headlights PWM", "3.3V PWM / 12V DC"),
+            ("Channel 3", "PWM Dimmer Out", "Underglow RGB LEDs MOSFET", "3.3V Gate MOSFET -> 12V Underglow RGB LED Strips PWM", "3.3V PWM / 12V DC"),
+            ("Channel 4", "PWM Dimmer Out", "Rear Brake Lights MOSFET", "3.3V Gate MOSFET -> 12V Rear Tail / Brake Lights PWM", "3.3V PWM / 12V DC")
+        ]
+
+        for item in pca_items:
+            pca_rows.append([
+                Paragraph(f"<b>{item[0]}</b>", cell_style),
+                Paragraph(item[1], cell_style),
+                Paragraph(f"<b>{item[2]}</b>", cell_style),
+                Paragraph(item[3], cell_style),
+                Paragraph(item[4], cell_style)
+            ])
+
+        t_pca = Table(pca_rows, colWidths=[110, 100, 140, 150, 90])
+        t_pca.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f5f8ff')])
+        ]))
+        story.append(t_pca)
+
+        # PAGE 3: BILL OF MATERIALS / PARTS LIST
         story.append(PageBreak())
         story.append(Paragraph("📦 4WD ROVER WITH ANIMATRONIC HEAD - BILL OF MATERIALS (PARTS LIST)", title_style))
-        story.append(Paragraph("Page 2 of 2: Complete Parts Specification, Quantities, Power Requirements & Subsystem Roles", subtitle_style))
+        story.append(Paragraph("Page 3 of 3: Complete Parts Specification, Quantities, Power Requirements & Subsystem Roles", subtitle_style))
         story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
 
         bom_rows = [[
