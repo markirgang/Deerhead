@@ -625,11 +625,11 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             ("3.3V Power", "Pin 17", "Pin 18", "GPIO 24 - L298 #1 IN2 (FL Wheel)"),
             ("GPIO 10 - Sonar Front Trig", "Pin 19", "Pin 20", "Ground (GND) - Common GND"),
             ("GPIO 9 - Sonar Front Echo", "Pin 21", "Pin 22", "GPIO 25 - L298 #1 IN3 (FR Wheel)"),
-            ("GPIO 11 - Sonar Rear Trig", "Pin 23", "Pin 24", "GPIO 8 - L298 #1 IN4 (FR Wheel)"),
+            ("GPIO 11 - IRLZ44N MOSFET #3 (Brake)", "Pin 23", "Pin 24", "GPIO 8 - L298 #1 IN4 (FR Wheel)"),
             ("Ground (GND)", "Pin 25", "Pin 26", "GPIO 7"),
             ("GPIO 0 (ID_SD)", "Pin 27", "Pin 28", "GPIO 1 (ID_SC)"),
-            ("GPIO 5 - Sonar Left Trig", "Pin 29", "Pin 30", "Ground (GND) - Common GND"),
-            ("GPIO 6 - Sonar Left Echo", "Pin 31", "Pin 32", "GPIO 12 (PWM) - L298 #2 ENA (RL Wheel)"),
+            ("GPIO 5 - IRLZ44N MOSFET #1 (Headlights)", "Pin 29", "Pin 30", "Ground (GND) - Common GND"),
+            ("GPIO 6 - IRLZ44N MOSFET #2 (Underglow)", "Pin 31", "Pin 32", "GPIO 12 (PWM) - L298 #2 ENA (RL Wheel)"),
             ("GPIO 13 (PWM) - L298 #2 ENB (RR)", "Pin 33", "Pin 34", "Ground (GND) - Common GND"),
             ("GPIO 19 (PWM) - L298 #1 ENB (FR)", "Pin 35", "Pin 36", "GPIO 16 - L298 #2 IN1 (RL Wheel)"),
             ("GPIO 26 - L298 #2 IN4 (RR Wheel)", "Pin 37", "Pin 38", "GPIO 20 - L298 #2 IN2 (RL Wheel)"),
@@ -670,12 +670,9 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         pca_items = [
             ("I2C Header", "SDA / SCL / VCC / GND", "Raspberry Pi GPIO 2, 3 & 3.3V Pin 1", "I2C Serial Communication Bus (Addr: 0x40)", "3.3V DC VCC Logic"),
-            ("Ext Power V+", "V+ Screw Terminal", "5V 10A UBEC Regulator", "High-Current Servo & MOSFET Power Rail", "5V DC @ 10A"),
+            ("Ext Power V+", "V+ Screw Terminal", "5V 10A UBEC Regulator", "High-Current Servo Power Rail", "5V DC @ 10A"),
             ("Channel 0", "PWM Servo Out", "Camera Gimbal Pan Servo", "Camera Horizontal Pan Servo", "5V Servo Power"),
-            ("Channel 1", "PWM Servo Out", "Camera Gimbal Tilt Servo", "Camera Vertical Tilt Servo", "5V Servo Power"),
-            ("Channel 2", "PWM Dimmer Out", "Front Headlights MOSFET", "3.3V Gate MOSFET -> 12V High-Power Headlights PWM", "3.3V PWM / 12V DC"),
-            ("Channel 3", "PWM Dimmer Out", "Underglow RGB LEDs MOSFET", "3.3V Gate MOSFET -> 12V Underglow RGB LED Strips PWM", "3.3V PWM / 12V DC"),
-            ("Channel 4", "PWM Dimmer Out", "Rear Brake Lights MOSFET", "3.3V Gate MOSFET -> 12V Rear Tail / Brake Lights PWM", "3.3V PWM / 12V DC")
+            ("Channel 1", "PWM Servo Out", "Camera Gimbal Tilt Servo", "Camera Vertical Tilt Servo", "5V Servo Power")
         ]
 
         for item in pca_items:
