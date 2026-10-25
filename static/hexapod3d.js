@@ -147,6 +147,9 @@ class Hexapod3DRenderer {
         plateMesh.position.set(0, -68, 8);
         plaqueGroup.add(plateMesh);
 
+        // 4x DC Flashing Dome Lights (Driven via IRLZ44N MOSFETs on GPIO 5, 6, 13, 19)
+        this.buildDomeLights(plaqueGroup);
+
         // Black Screws on Plate Corners
         for (let x of [-16, 16]) {
             for (let y of [-4, 4]) {
@@ -363,6 +366,61 @@ class Hexapod3DRenderer {
         this.headSkullGroup.add(antlerGroup);
     }
 
+    buildDomeLights(parent) {
+        this.domeLightMeshes = {};
+        this.domePointLights = {};
+
+        const domeConfigs = [
+            { id: 'light1', x: -56, y: 64, color: 0xef4444, label: 'Dome Light 1 (Red)' },
+            { id: 'light2', x: 56, y: 64, color: 0xf59e0b, label: 'Dome Light 2 (Amber)' },
+            { id: 'light3', x: -56, y: -48, color: 0x3b82f6, label: 'Dome Light 3 (Blue)' },
+            { id: 'light4', x: 56, y: -48, color: 0x10b981, label: 'Dome Light 4 (Green)' }
+        ];
+
+        domeConfigs.forEach(cfg => {
+            const domeGroup = new THREE.Group();
+            domeGroup.position.set(cfg.x, cfg.y, 8);
+            parent.add(domeGroup);
+
+            // Metallic Base Ring
+            const baseGeo = new THREE.CylinderGeometry(8, 9.5, 5, 20);
+            baseGeo.rotateX(Math.PI / 2);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            domeGroup.add(baseMesh);
+
+            // Translucent Beacon Dome Glass Cap
+            const domeGeo = new THREE.SphereGeometry(7, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2);
+            domeGeo.rotateX(Math.PI / 2);
+            const domeMat = new THREE.MeshStandardMaterial({
+                color: cfg.color,
+                emissive: cfg.color,
+                emissiveIntensity: 0.1,
+                roughness: 0.1,
+                transparent: true,
+                opacity: 0.85
+            });
+            const domeMesh = new THREE.Mesh(domeGeo, domeMat);
+            domeMesh.position.z = 2.5;
+            domeGroup.add(domeMesh);
+
+            // Internal Glowing Bulb Core
+            const bulbGeo = new THREE.SphereGeometry(3.5, 12, 12);
+            const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const bulbMesh = new THREE.Mesh(bulbGeo, bulbMat);
+            bulbMesh.position.z = 4;
+            domeGroup.add(bulbMesh);
+
+            // Point Light for Dynamic Flashing Illumination
+            const pointLight = new THREE.PointLight(cfg.color, 0, 180);
+            pointLight.position.z = 6;
+            domeGroup.add(pointLight);
+
+            this.domeLightMeshes[cfg.id] = domeMesh;
+            this.domePointLights[cfg.id] = pointLight;
+        });
+    }
+
     buildL298Board(parent) {
         const l298Group = new THREE.Group();
         l298Group.position.set(52, -54, 12);
@@ -414,6 +472,23 @@ class Hexapod3DRenderer {
             } else {
                 this.lowerJawGroup.rotation.x += (0.0 - this.lowerJawGroup.rotation.x) * 0.3;
             }
+        }
+
+        // 3. Animate 4x DC Flashing Dome Lights (IRLZ44N MOSFETs)
+        if (this.domeLightMeshes && overrideState && overrideState.dome_lights) {
+            const lights = overrideState.dome_lights;
+            ['light1', 'light2', 'light3', 'light4'].forEach(id => {
+                const val = (lights[id] !== undefined) ? (lights[id] / 100.0) : 0;
+                const dome = this.domeLightMeshes[id];
+                const ptLight = this.domePointLights[id];
+
+                if (dome && dome.material) {
+                    dome.material.emissiveIntensity = 0.1 + val * 2.2;
+                }
+                if (ptLight) {
+                    ptLight.intensity = val * 2.8;
+                }
+            });
         }
     }
 

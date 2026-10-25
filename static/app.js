@@ -12,11 +12,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const deerheadState = {
         mouth_channel1: false,
         bow_channel2: false,
-        auto_bow: true
+        auto_bow: true,
+        dome_lights: { light1: 0, light2: 0, light3: 0, light4: 0, mode: "off" }
     };
+
+    let isMusicPerformanceActive = false;
 
     // Expose API object to Gemini AI & Performance Engine
     const appAPI = {
+        setMusicPerformanceActive: (active) => {
+            isMusicPerformanceActive = active;
+            if (active) {
+                appAPI.setDomeLightsMode('chase');
+            } else {
+                appAPI.setDomeLightsMode('off');
+            }
+        },
+        setDomeLightsMode: (mode) => {
+            deerheadState.dome_lights.mode = mode;
+            fetch('/api/deerhead/lights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode })
+            }).catch(e => {});
+            const el = document.getElementById('statusLightsMode');
+            if (el) el.textContent = mode.toUpperCase();
+        },
         setMouthEnergized: (energized) => {
             deerheadState.mouth_channel1 = energized;
             renderer.mouthEnergized = energized;
@@ -24,6 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) {
                 el.textContent = energized ? 'ENERGIZED (TALKING)' : 'CLOSED';
                 el.style.color = energized ? 'var(--accent-green)' : 'var(--text-muted)';
+            }
+            if (!isMusicPerformanceActive) {
+                if (energized && deerheadState.dome_lights.mode !== 'breathe') {
+                    appAPI.setDomeLightsMode('breathe');
+                } else if (!energized && deerheadState.dome_lights.mode === 'breathe') {
+                    appAPI.setDomeLightsMode('off');
+                }
             }
         },
         setBowEnergized: (energized) => {
@@ -120,7 +148,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             })
             .catch(err => {});
-    }, 500);
+
+        fetch('/api/deerhead/lights')
+            .then(res => res.json())
+            .then(data => {
+                deerheadState.dome_lights = data;
+                const modeEl = document.getElementById('statusLightsMode');
+                if (modeEl && data.mode) modeEl.textContent = data.mode.toUpperCase();
+
+                ['light1', 'light2', 'light3', 'light4'].forEach(id => {
+                    const valEl = document.getElementById(`valLight${id.slice(-1)}`);
+                    if (valEl && data[id] !== undefined) valEl.textContent = `${data[id]}%`;
+                });
+            })
+            .catch(err => {});
+    }, 400);
 
     // Start 3D Render Loop
     requestAnimationFrame(animate);
@@ -217,6 +259,35 @@ function setupDeerheadMotorControls(appAPI) {
             }).catch(e => {});
         });
     }
+
+    // Dome Light Mode Buttons
+    const btnStrobe = document.getElementById('btnLightsStrobe');
+    const btnChase = document.getElementById('btnLightsChase');
+    const btnSolid = document.getElementById('btnLightsSolid');
+    const btnOff = document.getElementById('btnLightsOff');
+
+    if (btnStrobe) btnStrobe.addEventListener('click', () => appAPI.setDomeLightsMode('strobe'));
+    if (btnChase) btnChase.addEventListener('click', () => appAPI.setDomeLightsMode('chase'));
+    if (btnSolid) btnSolid.addEventListener('click', () => appAPI.setDomeLightsMode('solid'));
+    if (btnOff) btnOff.addEventListener('click', () => appAPI.setDomeLightsMode('off'));
+
+    // Dome Light Sliders
+    document.querySelectorAll('.slide-dome-light').forEach(slider => {
+        slider.addEventListener('input', (e) => {
+            const lightKey = e.target.dataset.light;
+            const val = parseInt(e.target.value);
+            const valEl = document.getElementById(`valLight${lightKey.slice(-1)}`);
+            if (valEl) valEl.textContent = `${val}%`;
+
+            const payload = {};
+            payload[lightKey] = val;
+            fetch('/api/deerhead/lights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).catch(e => {});
+        });
+    });
 }
 
 function setupPresetButtons(appAPI, performanceEngine) {

@@ -450,6 +450,9 @@ class DeerheadPerformanceEngine {
     startAnalysisLoop() {
         if (this.loopRunning) return;
         this.loopRunning = true;
+        if (this.app && this.app.setMusicPerformanceActive) {
+            this.app.setMusicPerformanceActive(true);
+        }
         const freqData = new Uint8Array(128);
 
         const updateFrame = () => {
@@ -527,6 +530,7 @@ class DeerheadPerformanceEngine {
         if (this.app) {
             if (this.app.setMouthEnergized) this.app.setMouthEnergized(false);
             if (this.app.setBowEnergized) this.app.setBowEnergized(false);
+            if (this.app.setMusicPerformanceActive) this.app.setMusicPerformanceActive(false);
         }
 
         this.lastMouthState = false;

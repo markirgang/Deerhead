@@ -11,6 +11,7 @@ import cv2
 import base64
 import threading
 import time
+import math
 import random
 import urllib.parse
 import re
@@ -168,6 +169,62 @@ deerhead_state = {
     "last_bow_time": time.time()
 }
 
+# 4x DC Flashing Dome Lights State (Driven via IRLZ44N MOSFETs on GPIO 5, 6, 13, 19)
+dome_lights = {
+    "light1": 0,  # Top-Left 0-100
+    "light2": 0,  # Top-Right 0-100
+    "light3": 0,  # Bottom-Left 0-100
+    "light4": 0,  # Bottom-Right 0-100
+    "mode": "off" # off, solid, flash, strobe, chase
+}
+
+def dome_lights_background_loop():
+    step = 0
+    while True:
+        mode = dome_lights["mode"]
+        if mode == "breathe":
+            # Smooth sine-wave breathing pulse while deerhead is talking
+            val = int((math.sin(time.time() * 2.8) + 1.0) * 45 + 10)
+            dome_lights["light1"] = val
+            dome_lights["light2"] = val
+            dome_lights["light3"] = val
+            dome_lights["light4"] = val
+            time.sleep(0.04)
+        elif mode in ["chase", "dance"]:
+            # Rapid light chase pattern for music and dance performance
+            idx = step % 4
+            dome_lights["light1"] = 100 if idx == 0 else 10
+            dome_lights["light2"] = 100 if idx == 1 else 10
+            dome_lights["light4"] = 100 if idx == 2 else 10
+            dome_lights["light3"] = 100 if idx == 3 else 10
+            time.sleep(0.12)
+        elif mode == "flash":
+            state = (step % 2 == 0)
+            val = 100 if state else 0
+            dome_lights["light1"] = val
+            dome_lights["light2"] = val
+            dome_lights["light3"] = val
+            dome_lights["light4"] = val
+            time.sleep(0.3)
+        elif mode == "strobe":
+            val = 100 if (step % 2 == 0) else 0
+            dome_lights["light1"] = val
+            dome_lights["light2"] = val
+            dome_lights["light3"] = val
+            dome_lights["light4"] = val
+            time.sleep(0.08)
+        elif mode == "solid":
+            dome_lights["light1"] = 100
+            dome_lights["light2"] = 100
+            dome_lights["light3"] = 100
+            dome_lights["light4"] = 100
+            time.sleep(0.5)
+        else:
+            time.sleep(0.5)
+        step += 1
+
+threading.Thread(target=dome_lights_background_loop, daemon=True).start()
+
 # Occasional Auto-Bowing Thread
 def auto_bow_background_loop():
     while True:
@@ -243,6 +300,8 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.serve_camera_frame()
         elif self.path.startswith("/api/deerhead/state") or self.path.startswith("/api/motor/head_neck") or self.path.startswith("/api/motor/state"):
             self.send_json(deerhead_state)
+        elif self.path.startswith("/api/deerhead/lights") or self.path.startswith("/api/lights"):
+            self.send_json(dome_lights)
         elif self.path.startswith("/api/audio/list") or self.path.startswith("/api/music/list"):
             files = []
             if os.path.exists(AUDIO_DIR):
@@ -333,6 +392,17 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
                 deerhead_state["auto_bow"] = bool(data["auto_bow"])
 
             self.send_json({"success": True, "state": deerhead_state})
+
+        elif self.path in ["/api/deerhead/lights", "/api/lights"]:
+            if "mode" in data:
+                dome_lights["mode"] = str(data["mode"]).lower()
+            for key in ["light1", "light2", "light3", "light4"]:
+                if key in data:
+                    try:
+                        dome_lights[key] = max(0, min(100, int(data[key])))
+                    except ValueError:
+                        pass
+            self.send_json({"success": True, "lights": dome_lights})
 
         elif self.path in ["/api/deerhead/bow", "/api/bow"]:
             duration = float(data.get("duration", 1.8))
@@ -545,6 +615,7 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
             [Paragraph("<b>Raspberry Pi 4 / 5</b>", cell_style), Paragraph("Master Web Server, Gemini AI, Audio VAD Mouth Sync & Bow Controller", cell_style), Paragraph("+5V @ 3A DC (UBEC)")],
             [Paragraph("<b>L298 Driver Channel 1 (Mouth)</b>", cell_style), Paragraph("Lower Jaw Motor / Solenoid (GPIO 17 ENA, GPIO 27 IN1, GPIO 22 IN2)", cell_style), Paragraph("+12V DC Rail")],
             [Paragraph("<b>L298 Driver Channel 2 (Bow)</b>", cell_style), Paragraph("Head Bowing Pivot Motor (GPIO 4 ENB, GPIO 14 IN3, GPIO 15 IN4)", cell_style), Paragraph("+12V DC Rail")],
+            [Paragraph("<b>4x IRLZ44N MOSFET Drivers</b>", cell_style), Paragraph("4x 12V DC Flashing Dome Lights (GPIO 5, GPIO 6, GPIO 13, GPIO 19 with 220Ω Gate & 10kΩ GND)", cell_style), Paragraph("+12V DC Rail")],
             [Paragraph("<b>USB / CSI Camera</b>", cell_style), Paragraph("Mounted on Deerhead nose/eyes for Gemini Computer Vision", cell_style), Paragraph("+5V DC USB Power")],
             [Paragraph("<b>USB Audio / Speaker System</b>", cell_style), Paragraph("Speaker system for TTS Speech & Singing performance playback", cell_style), Paragraph("5V - 12V DC Power")]
         ]
@@ -564,35 +635,58 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
         script = f'''#!/usr/bin/env python3
 """
 Wall-Mounted Animatronic Deerhead Master Hardware Control Script
-Controls lower jaw mouth motor using L298 Channel 1 (GPIO 17, 27, 22)
-and head bowing motor using L298 Channel 2 (GPIO 4, 14, 15).
+Controls lower jaw mouth motor using L298 Channel 1 (GPIO 17, 27, 22),
+head bowing motor using L298 Channel 2 (GPIO 4, 14, 15),
+and 4x DC Flashing Dome Lights via IRLZ44N MOSFETs (GPIO 5, 6, 13, 19).
 """
 
 import time
 import RPi.GPIO as GPIO
 
 # GPIO Pin Definitions for L298 Motor Driver
-# Channel 1: Lower Jaw Mouth Motor
 L298_ENA = 17  # Mouth PWM
 L298_IN1 = 27  # Mouth IN1
 L298_IN2 = 22  # Mouth IN2
 
-# Channel 2: Bowing Neck Motor
 L298_ENB = 4   # Bow PWM
 L298_IN3 = 14  # Bow IN3
 L298_IN4 = 15  # Bow IN4
 
+# GPIO Pin Definitions for 4x IRLZ44N MOSFET Dome Light Drivers
+DOME_LIGHT_1 = 5   # Top-Left Dome Light PWM (Pin 29)
+DOME_LIGHT_2 = 6   # Top-Right Dome Light PWM (Pin 31)
+DOME_LIGHT_3 = 13  # Bottom-Left Dome Light PWM (Pin 33)
+DOME_LIGHT_4 = 19  # Bottom-Right Dome Light PWM (Pin 35)
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-PINS = [L298_ENA, L298_IN1, L298_IN2, L298_ENB, L298_IN3, L298_IN4]
+PINS = [L298_ENA, L298_IN1, L298_IN2, L298_ENB, L298_IN3, L298_IN4, DOME_LIGHT_1, DOME_LIGHT_2, DOME_LIGHT_3, DOME_LIGHT_4]
 GPIO.setup(PINS, GPIO.OUT)
 
-pwm_mouth = GPIO.PWM(L298_ENA, 1000)
-pwm_bow   = GPIO.PWM(L298_ENB, 1000)
+pwm_mouth  = GPIO.PWM(L298_ENA, 1000)
+pwm_bow    = GPIO.PWM(L298_ENB, 1000)
+pwm_dome1  = GPIO.PWM(DOME_LIGHT_1, 1000)
+pwm_dome2  = GPIO.PWM(DOME_LIGHT_2, 1000)
+pwm_dome3  = GPIO.PWM(DOME_LIGHT_3, 1000)
+pwm_dome4  = GPIO.PWM(DOME_LIGHT_4, 1000)
 
-pwm_mouth.start(0)
-pwm_bow.start(0)
+for p in [pwm_mouth, pwm_bow, pwm_dome1, pwm_dome2, pwm_dome3, pwm_dome4]:
+    p.start(0)
+
+def set_dome_light(light_num, duty_cycle):
+    """Sets brightness (0-100%) of specified IRLZ44N MOSFET Dome Light."""
+    pwms = {1: pwm_dome1, 2: pwm_dome2, 3: pwm_dome3, 4: pwm_dome4}
+    if light_num in pwms:
+        pwms[light_num].ChangeDutyCycle(max(0, min(100, duty_cycle)))
+
+def flash_all_dome_lights(cycles=5, speed_sec=0.2):
+    """Flashes all 4 DC Dome Lights in strobe sync."""
+    for _ in range(cycles):
+        for i in range(1, 5): set_dome_light(i, 100)
+        time.sleep(speed_sec)
+        for i in range(1, 5): set_dome_light(i, 0)
+        time.sleep(speed_sec)
 
 def set_mouth_energized(active, speed=100):
     """Channel 1: Opens lower jaw when active."""
