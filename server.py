@@ -25,9 +25,9 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 
 def generate_synthetic_camera_frame():
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
-    frame[:, :] = (30, 25, 20)
-    cv2.putText(frame, "4WD ROVER CAMERA FEED", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 240, 255), 2)
-    cv2.putText(frame, "STATUS: Virtual Camera Active", (160, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (160, 255, 160), 1)
+    frame[:, :] = (20, 30, 25)
+    cv2.putText(frame, "WALL DEERHEAD CAMERA FEED", (130, 200), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 240, 255), 2)
+    cv2.putText(frame, "STATUS: Wall-Mounted AI Vision Active", (140, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (160, 255, 160), 1)
     t_str = time.strftime("%H:%M:%S")
     cv2.putText(frame, f"LIVE TIME: {t_str}", (220, 280), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
     return frame
@@ -157,114 +157,58 @@ class CameraStream:
 camera_stream = CameraStream("usb")
 gemini_bridge = GeminiHexapodBridge()
 
-# 4WD Rover Motor State (2x L298 Motor Controllers driving 4 wheels independently)
-motor_state = {
-    "fl": {"dir": "stop", "speed": 100},
-    "fr": {"dir": "stop", "speed": 100},
-    "rl": {"dir": "stop", "speed": 100},
-    "rr": {"dir": "stop", "speed": 100}
-}
-
-# Head & Neck L298 Motor Controller State
-# Channel 1: Head Moving Mouth Motor
-# Channel 2: Pulsating Neck Motor
-head_neck_state = {
+# Wall-Mounted Animatronic Deerhead State
+# L298 Motor Controller Channel 1: Mouth Motor (Energized = Jaw Open/Moving)
+# L298 Motor Controller Channel 2: Bowing Motor (Energized = Deerhead Bows Forward)
+deerhead_state = {
     "mouth_channel1": False,
-    "neck_channel2": False
+    "bow_channel2": False,
+    "auto_bow": True,
+    "last_bow_time": time.time()
 }
 
-sensor_state = {
-    "front": 45, # cm
-    "rear": 120,
-    "left": 80,
-    "right": 65
-}
-
-def update_simulated_sensors():
+# Occasional Auto-Bowing Thread
+def auto_bow_background_loop():
     while True:
-        sensor_state["front"] = max(10, min(200, sensor_state["front"] + random.randint(-2, 2)))
-        sensor_state["rear"]  = max(10, min(200, sensor_state["rear"]  + random.randint(-2, 2)))
-        sensor_state["left"]  = max(10, min(200, sensor_state["left"]  + random.randint(-2, 2)))
-        sensor_state["right"] = max(10, min(200, sensor_state["right"] + random.randint(-2, 2)))
-        time.sleep(0.5)
+        time.sleep(1.0)
+        now = time.time()
+        if deerhead_state["auto_bow"] and not deerhead_state["bow_channel2"]:
+            # Bow occasionally every 20-35 seconds
+            interval = random.randint(20, 35)
+            if now - deerhead_state["last_bow_time"] > interval:
+                trigger_bow_sequence(duration=1.8)
 
-threading.Thread(target=update_simulated_sensors, daemon=True).start()
+def trigger_bow_sequence(duration=1.8):
+    def bow_worker():
+        deerhead_state["bow_channel2"] = True
+        deerhead_state["last_bow_time"] = time.time()
+        time.sleep(duration)
+        deerhead_state["bow_channel2"] = False
 
-# Rover Presets / Motion Modes
-SAVED_POSES = {
-    "4WD Full Forward": {
-        "wheels": {"fl": "forward", "fr": "forward", "rl": "forward", "rr": "forward"},
-        "description": "Drive all 4 wheels forward in unison"
+    threading.Thread(target=bow_worker, daemon=True).start()
+
+threading.Thread(target=auto_bow_background_loop, daemon=True).start()
+
+DEERHEAD_PRESETS = {
+    "Welcome Bow": {
+        "description": "Bows gracefully forward to welcome guests into the room.",
+        "action": "bow"
     },
-    "Full Reverse": {
-        "wheels": {"fl": "reverse", "fr": "reverse", "rl": "reverse", "rr": "reverse"},
-        "description": "Drive all 4 wheels in reverse"
+    "Singing Performance": {
+        "description": "Syncs mouth to song audio while performing rhythmic head bows.",
+        "action": "sing"
     },
-    "Tank Spin Left": {
-        "wheels": {"fl": "reverse", "fr": "forward", "rl": "reverse", "rr": "forward"},
-        "description": "Spin in place counter-clockwise (Left wheels reverse, Right wheels forward)"
+    "Mouth Calibration Test": {
+        "description": "Pulses Channel 1 mouth motor to verify lower jaw mechanical movement.",
+        "action": "mouth_test"
     },
-    "Tank Spin Right": {
-        "wheels": {"fl": "forward", "fr": "reverse", "rl": "forward", "rr": "reverse"},
-        "description": "Spin in place clockwise (Left wheels forward, Right wheels reverse)"
-    },
-    "Pivot Turn Left": {
-        "wheels": {"fl": "stop", "fr": "forward", "rl": "stop", "rr": "forward"},
-        "description": "Pivot turn left (Left wheels stopped, Right wheels forward)"
-    },
-    "Pivot Turn Right": {
-        "wheels": {"fl": "forward", "fr": "stop", "rl": "forward", "rr": "stop"},
-        "description": "Pivot turn right (Left wheels forward, Right wheels stopped)"
-    },
-    "Diagonal Crab Drive": {
-        "wheels": {"fl": "forward", "fr": "reverse", "rl": "reverse", "rr": "forward"},
-        "description": "Opposing wheel directions for diagonal skid motion"
-    },
-    "Emergency Halt": {
-        "wheels": {"fl": "stop", "fr": "stop", "rl": "stop", "rr": "stop"},
-        "description": "Stop all 4 wheels immediately"
+    "Idle Sentinel Mode": {
+        "description": "Mounts vertically on wall, eyes active, bowing occasionally.",
+        "action": "sentinel"
     }
 }
 
-def apply_rover_command(cmd, speed=100):
-    cmd = str(cmd).lower()
-    if cmd in ["forward", "fwd", "run", "run_forward"]:
-        motor_state["fl"] = {"dir": "forward", "speed": speed}
-        motor_state["fr"] = {"dir": "forward", "speed": speed}
-        motor_state["rl"] = {"dir": "forward", "speed": speed}
-        motor_state["rr"] = {"dir": "forward", "speed": speed}
-    elif cmd in ["backward", "reverse", "bwd"]:
-        motor_state["fl"] = {"dir": "reverse", "speed": speed}
-        motor_state["fr"] = {"dir": "reverse", "speed": speed}
-        motor_state["rl"] = {"dir": "reverse", "speed": speed}
-        motor_state["rr"] = {"dir": "reverse", "speed": speed}
-    elif cmd in ["spin_left", "spin_l", "tank_left"]:
-        motor_state["fl"] = {"dir": "reverse", "speed": speed}
-        motor_state["fr"] = {"dir": "forward", "speed": speed}
-        motor_state["rl"] = {"dir": "reverse", "speed": speed}
-        motor_state["rr"] = {"dir": "forward", "speed": speed}
-    elif cmd in ["spin_right", "spin_r", "tank_right"]:
-        motor_state["fl"] = {"dir": "forward", "speed": speed}
-        motor_state["fr"] = {"dir": "reverse", "speed": speed}
-        motor_state["rl"] = {"dir": "forward", "speed": speed}
-        motor_state["rr"] = {"dir": "reverse", "speed": speed}
-    elif cmd in ["turn_left", "left"]:
-        motor_state["fl"] = {"dir": "stop", "speed": speed}
-        motor_state["fr"] = {"dir": "forward", "speed": speed}
-        motor_state["rl"] = {"dir": "stop", "speed": speed}
-        motor_state["rr"] = {"dir": "forward", "speed": speed}
-    elif cmd in ["turn_right", "right"]:
-        motor_state["fl"] = {"dir": "forward", "speed": speed}
-        motor_state["fr"] = {"dir": "stop", "speed": speed}
-        motor_state["rl"] = {"dir": "forward", "speed": speed}
-        motor_state["rr"] = {"dir": "stop", "speed": speed}
-    elif cmd in ["stop", "halt", "park"]:
-        motor_state["fl"] = {"dir": "stop", "speed": 0}
-        motor_state["fr"] = {"dir": "stop", "speed": 0}
-        motor_state["rl"] = {"dir": "stop", "speed": 0}
-        motor_state["rr"] = {"dir": "stop", "speed": 0}
-
-class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
+class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
@@ -286,22 +230,18 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             pdf_bytes = self.generate_schematic_pdf()
             self.send_response(200)
             self.send_header('Content-type', 'application/pdf')
-            self.send_header('Content-Disposition', 'attachment; filename="4WD_Rover_Wiring_Schematic.pdf"')
+            self.send_header('Content-Disposition', 'attachment; filename="Animatronic_Deerhead_Wiring_Schematic.pdf"')
             self.end_headers()
             self.wfile.write(pdf_bytes)
 
         elif self.path.startswith("/api/status"):
-            self.send_json({"status": "online", "device": "Raspberry Pi 4WD Rover with Robotic Head", "python_version": sys.version})
-        elif self.path.startswith("/api/poses"):
-            self.send_json(SAVED_POSES)
+            self.send_json({"status": "online", "device": "Raspberry Pi Wall-Mounted Animatronic Deerhead", "python_version": sys.version})
+        elif self.path.startswith("/api/poses") or self.path.startswith("/api/presets"):
+            self.send_json(DEERHEAD_PRESETS)
         elif self.path.startswith("/api/camera/frame"):
             self.serve_camera_frame()
-        elif self.path.startswith("/api/sensors/distances"):
-            self.send_json(sensor_state)
-        elif self.path.startswith("/api/motor/state"):
-            self.send_json(motor_state)
-        elif self.path.startswith("/api/motor/head_neck"):
-            self.send_json(head_neck_state)
+        elif self.path.startswith("/api/deerhead/state") or self.path.startswith("/api/motor/head_neck") or self.path.startswith("/api/motor/state"):
+            self.send_json(deerhead_state)
         elif self.path.startswith("/api/audio/list") or self.path.startswith("/api/music/list"):
             files = []
             if os.path.exists(AUDIO_DIR):
@@ -383,25 +323,20 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
         except json.JSONDecodeError:
             data = {}
 
-        if self.path in ["/api/motor/rover", "/api/motor/wheels"]:
-            if "command" in data:
-                apply_rover_command(data["command"], data.get("speed", 100))
-            else:
-                for wheel in ["fl", "fr", "rl", "rr"]:
-                    if wheel in data:
-                        w_data = data[wheel]
-                        if isinstance(w_data, dict):
-                            motor_state[wheel]["dir"] = w_data.get("dir", motor_state[wheel]["dir"])
-                            motor_state[wheel]["speed"] = w_data.get("speed", motor_state[wheel]["speed"])
-                        elif isinstance(w_data, str):
-                            motor_state[wheel]["dir"] = w_data
+        if self.path in ["/api/deerhead/control", "/api/motor/head_neck", "/api/motor/l298", "/api/motor/rover", "/api/motor/wheels"]:
+            if "mouth" in data or "mouth_channel1" in data:
+                deerhead_state["mouth_channel1"] = data.get("mouth", data.get("mouth_channel1", False))
+            if "bow" in data or "neck" in data or "neck_channel2" in data or "bow_channel2" in data:
+                deerhead_state["bow_channel2"] = data.get("bow", data.get("neck", data.get("neck_channel2", data.get("bow_channel2", False))))
+            if "auto_bow" in data:
+                deerhead_state["auto_bow"] = bool(data["auto_bow"])
 
-            self.send_json({"success": True, "state": motor_state})
+            self.send_json({"success": True, "state": deerhead_state})
 
-        elif self.path in ["/api/motor/head_neck", "/api/motor/l298"]:
-            head_neck_state["mouth_channel1"] = data.get("mouth", data.get("mouth_channel1", False))
-            head_neck_state["neck_channel2"]  = data.get("neck", data.get("neck_channel2", False))
-            self.send_json({"success": True, "state": head_neck_state})
+        elif self.path in ["/api/deerhead/bow", "/api/bow"]:
+            duration = float(data.get("duration", 1.8))
+            trigger_bow_sequence(duration)
+            self.send_json({"success": True, "message": f"Bowing deerhead for {duration} seconds"})
 
         elif self.path == "/api/camera/select":
             source = data.get("source", "usb")
@@ -421,11 +356,13 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             result = gemini_bridge.generate_chat_response(api_key, user_text, image_bytes)
             if result.get("action"):
                 act = result["action"]
-                if act.get("name") in ["rover_drive", "hexapod_walk"]:
+                if act.get("name") in ["deerhead_bow", "bow"]:
                     args = act.get("args", {})
-                    apply_rover_command(args.get("direction", "forward"), args.get("speed", 100))
-                elif act.get("name") in ["rover_stop", "hexapod_stop"]:
-                    apply_rover_command("stop")
+                    trigger_bow_sequence(args.get("duration_seconds", 1.8))
+                elif act.get("name") == "deerhead_mouth":
+                    args = act.get("args", {})
+                    state = args.get("state", "close")
+                    deerhead_state["mouth_channel1"] = (state == "open" or state == "pulse")
 
             self.send_json(result)
 
@@ -442,11 +379,9 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             result = gemini_bridge.generate_voice_chat_response(api_key, audio_bytes, mime_type, image_bytes)
             if result.get("action"):
                 act = result["action"]
-                if act.get("name") in ["rover_drive", "hexapod_walk"]:
+                if act.get("name") in ["deerhead_bow", "bow"]:
                     args = act.get("args", {})
-                    apply_rover_command(args.get("direction", "forward"), args.get("speed", 100))
-                elif act.get("name") in ["rover_stop", "hexapod_stop"]:
-                    apply_rover_command("stop")
+                    trigger_bow_sequence(args.get("duration_seconds", 1.8))
 
             self.send_json(result)
 
@@ -457,15 +392,15 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             else:
                 gesture, finger_count, _ = gemini_bridge.detect_hand_gestures(frame)
                 action = None
-                if gesture == "5_FINGERS_FORWARD":
-                    action = {"name": "rover_drive", "args": {"direction": "forward"}}
-                    apply_rover_command("forward")
-                elif gesture == "2_FINGERS_WAVE":
-                    action = {"name": "rover_drive", "args": {"direction": "spin_left"}}
-                    apply_rover_command("spin_left")
-                elif gesture == "1_FINGER_ATTACK":
-                    action = {"name": "rover_drive", "args": {"direction": "reverse"}}
-                    apply_rover_command("reverse")
+                if gesture == "5_FINGERS_BOW":
+                    action = {"name": "deerhead_bow", "args": {"duration_seconds": 2.0}}
+                    trigger_bow_sequence(2.0)
+                elif gesture == "2_FINGERS_TALK":
+                    action = {"name": "deerhead_mouth", "args": {"state": "open"}}
+                    deerhead_state["mouth_channel1"] = True
+                elif gesture == "1_FINGER_SING":
+                    action = {"name": "deerhead_sing", "args": {}}
+                    trigger_bow_sequence(1.5)
 
                 self.send_json({
                     "gesture": gesture,
@@ -510,7 +445,7 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
             python_script = self.generate_hardware_script(data)
             self.send_response(200)
             self.send_header('Content-type', 'application/x-python')
-            self.send_header('Content-Disposition', 'attachment; filename="rover_4wd_robotic_head_control.py"')
+            self.send_header('Content-Disposition', 'attachment; filename="deerhead_animatronic_control.py"')
             self.end_headers()
             self.wfile.write(python_script.encode('utf-8'))
 
@@ -573,21 +508,21 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
         header_cell_style = ParagraphStyle('TableHeaderCell', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.white)
 
         story = [
-            Paragraph("🤖 4WD ROVER WITH ANIMATRONIC HEAD - MASTER WIRING SCHEMATIC", title_style),
-            Paragraph("Page 1 of 2: Pinout Guide for Raspberry Pi 4/5, 3x L298N Motor Controllers, 4x HC-SR04 Sonar & Power Rail", subtitle_style),
+            Paragraph("🦌 WALL-MOUNTED ANIMATRONIC DEERHEAD - MASTER SCHEMATIC", title_style),
+            Paragraph("Hardware Pinout Guide for Raspberry Pi 4/5, L298 Motor Driver (Mouth Ch1 & Bow Ch2) & Audio Sync", subtitle_style),
             HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8),
             Paragraph("⚡ Core System Hardware Overview", heading_style)
         ]
 
         overview_data = [
             [Paragraph("Module / Component", header_cell_style), Paragraph("Hardware Role & Signals", header_cell_style), Paragraph("Power Requirements", header_cell_style)],
-            [Paragraph("<b>Raspberry Pi 4 / 5</b>", cell_style), Paragraph("Executes master server, Gemini AI, L298N motor drivers, Sonar VAD & Pan/Tilt Servos", cell_style), Paragraph("+5V @ 3A DC (UBEC)"),],
-            [Paragraph("<b>L298N Driver #1 (Front)</b>", cell_style), Paragraph("Front-Left Wheel (GPIO 18 ENA, 23, 24) and Front-Right Wheel (GPIO 19 ENB, 25, 8)", cell_style), Paragraph("+7.4V - +11.1V LiPo Rail"),],
-            [Paragraph("<b>L298N Driver #2 (Rear)</b>", cell_style), Paragraph("Rear-Left Wheel (GPIO 12 ENA, 16, 20) and Rear-Right Wheel (GPIO 13 ENB, 21, 26)", cell_style), Paragraph("+7.4V - +11.1V LiPo Rail"),],
-            [Paragraph("<b>L298N Driver #3 (Head/Neck)</b>", cell_style), Paragraph("Mouth DC Motor (GPIO 17 ENA, 27, 22) and Pulsating Neck Motor (GPIO 4 ENB, 14, 15)", cell_style), Paragraph("+6V DC Power Rail"),],
-            [Paragraph("<b>HC-SR04 Sonar (4x)</b>", cell_style), Paragraph("Front (GPIO 5/6), Rear (GPIO 13/19), Left (GPIO 26/21), Right (GPIO 20/16) Ultrasonic Distance", cell_style), Paragraph("+5V DC Logic VCC"),]
+            [Paragraph("<b>Raspberry Pi 4 / 5</b>", cell_style), Paragraph("Master Web Server, Gemini AI, Audio VAD Mouth Sync & Bow Controller", cell_style), Paragraph("+5V @ 3A DC (UBEC)")],
+            [Paragraph("<b>L298 Driver Channel 1 (Mouth)</b>", cell_style), Paragraph("Lower Jaw Motor / Solenoid (GPIO 17 ENA, GPIO 27 IN1, GPIO 22 IN2)", cell_style), Paragraph("+12V DC Rail")],
+            [Paragraph("<b>L298 Driver Channel 2 (Bow)</b>", cell_style), Paragraph("Head Bowing Pivot Motor (GPIO 4 ENB, GPIO 14 IN3, GPIO 15 IN4)", cell_style), Paragraph("+12V DC Rail")],
+            [Paragraph("<b>USB / CSI Camera</b>", cell_style), Paragraph("Mounted on Deerhead nose/eyes for Gemini Computer Vision", cell_style), Paragraph("+5V DC USB Power")],
+            [Paragraph("<b>USB Audio / Speaker System</b>", cell_style), Paragraph("Speaker system for TTS Speech & Singing performance playback", cell_style), Paragraph("5V - 12V DC Power")]
         ]
-        t_overview = Table(overview_data, colWidths=[150, 430, 140])
+        t_overview = Table(overview_data, colWidths=[160, 420, 140])
         t_overview.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
@@ -596,310 +531,80 @@ class RoverRequestHandler(http.server.SimpleHTTPRequestHandler):
         story.append(t_overview)
         story.append(Spacer(1, 10))
 
-        # --- PAGE 2: FRITZING-STYLE VISUAL PINOUT DIAGRAM PAGE ---
-        story.append(PageBreak())
-        story.append(Paragraph("🍓 FRITZING-STYLE RASPBERRY PI GPIO & PCA9685 PINOUT DIAGRAM", title_style))
-        story.append(Paragraph("Page 2 of 3: Visual Labeled Hardware Pinout Diagrams for Raspberry Pi 40-Pin Header, PCA9685 Board & Motor Drivers", subtitle_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
-
-        story.append(Paragraph("📌 Raspberry Pi 40-Pin GPIO Header (Dual-Row Fritzing-Style Pin Layout)", heading_style))
-
-        rpi_header_rows = [[
-            Paragraph("Odd Pin (Left)", header_cell_style),
-            Paragraph("BCM Signal / Function", header_cell_style),
-            Paragraph("Pin #", header_cell_style),
-            Paragraph("Pin #", header_cell_style),
-            Paragraph("BCM Signal / Function", header_cell_style),
-            Paragraph("Even Pin (Right)", header_cell_style)
-        ]]
-
-        rpi_pin_pairs = [
-            ("3.3V Power - Logic Ref", "Pin 1", "Pin 2", "5.0V Power - Logic VCC"),
-            ("GPIO 2 (SDA1) - I2C Data", "Pin 3", "Pin 4", "5.0V Power - Logic VCC"),
-            ("GPIO 3 (SCL1) - I2C Clock", "Pin 5", "Pin 6", "Ground (GND) - Common GND"),
-            ("GPIO 4 - L298 #3 ENB (Neck PWM)", "Pin 7", "Pin 8", "GPIO 14 (TX) - L298 #3 IN3 (Neck)"),
-            ("Ground (GND) - Common GND", "Pin 9", "Pin 10", "GPIO 15 (RX) - L298 #3 IN4 (Neck)"),
-            ("GPIO 17 - L298 #3 ENA (Mouth PWM)", "Pin 11", "Pin 12", "GPIO 18 (PWM) - L298 #1 ENA (FL Wheel)"),
-            ("GPIO 27 - L298 #3 IN1 (Mouth)", "Pin 13", "Pin 14", "Ground (GND) - Common GND"),
-            ("GPIO 22 - L298 #3 IN2 (Mouth)", "Pin 15", "Pin 16", "GPIO 23 - L298 #1 IN1 (FL Wheel)"),
-            ("3.3V Power", "Pin 17", "Pin 18", "GPIO 24 - L298 #1 IN2 (FL Wheel)"),
-            ("GPIO 10 - Sonar Front Trig", "Pin 19", "Pin 20", "Ground (GND) - Common GND"),
-            ("GPIO 9 - Sonar Front Echo", "Pin 21", "Pin 22", "GPIO 25 - L298 #1 IN3 (FR Wheel)"),
-            ("GPIO 11 - IRLZ44N MOSFET #3 (Brake)", "Pin 23", "Pin 24", "GPIO 8 - L298 #1 IN4 (FR Wheel)"),
-            ("Ground (GND)", "Pin 25", "Pin 26", "GPIO 7"),
-            ("GPIO 0 (ID_SD)", "Pin 27", "Pin 28", "GPIO 1 (ID_SC)"),
-            ("GPIO 5 - IRLZ44N MOSFET #1 (Headlights)", "Pin 29", "Pin 30", "Ground (GND) - Common GND"),
-            ("GPIO 6 - IRLZ44N MOSFET #2 (Underglow)", "Pin 31", "Pin 32", "GPIO 12 (PWM) - L298 #2 ENA (RL Wheel)"),
-            ("GPIO 13 (PWM) - L298 #2 ENB (RR)", "Pin 33", "Pin 34", "Ground (GND) - Common GND"),
-            ("GPIO 19 (PWM) - L298 #1 ENB (FR)", "Pin 35", "Pin 36", "GPIO 16 - L298 #2 IN1 (RL Wheel)"),
-            ("GPIO 26 - L298 #2 IN4 (RR Wheel)", "Pin 37", "Pin 38", "GPIO 20 - L298 #2 IN2 (RL Wheel)"),
-            ("Ground (GND)", "Pin 39", "Pin 40", "GPIO 21 - L298 #2 IN3 (RR Wheel)")
-        ]
-
-        for left_sig, left_p, right_p, right_sig in rpi_pin_pairs:
-            rpi_header_rows.append([
-                Paragraph(f"<b>{left_sig}</b>", cell_style),
-                Paragraph(f"<code>{left_sig.split(' - ')[0]}</code>", cell_style),
-                Paragraph(f"<b>{left_p}</b>", cell_style),
-                Paragraph(f"<b>{right_p}</b>", cell_style),
-                Paragraph(f"<code>{right_sig.split(' - ')[0]}</code>", cell_style),
-                Paragraph(f"<b>{right_sig}</b>", cell_style)
-            ])
-
-        t_rpi = Table(rpi_header_rows, colWidths=[150, 100, 45, 45, 100, 150])
-        t_rpi.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
-            ('BACKGROUND', (2,1), (2,-1), colors.HexColor('#e6f2ff')),
-            ('BACKGROUND', (3,1), (3,-1), colors.HexColor('#e6f2ff'))
-        ]))
-        story.append(t_rpi)
-        story.append(Spacer(1, 10))
-
-        # PCA9685 Fritzing Pinout Table
-        story.append(Paragraph("🎛️ PCA9685 16-Channel PWM Servo & MOSFET Driver (Pinout Diagram & Signal Map)", heading_style))
-        pca_rows = [[
-            Paragraph("Terminal / Channel", header_cell_style),
-            Paragraph("Signal Type", header_cell_style),
-            Paragraph("Target Module Connected", header_cell_style),
-            Paragraph("Function Description", header_cell_style),
-            Paragraph("Output Voltage / Power", header_cell_style)
-        ]]
-
-        pca_items = [
-            ("I2C Header", "SDA / SCL / VCC / GND", "Raspberry Pi GPIO 2, 3 & 3.3V Pin 1", "I2C Serial Communication Bus (Addr: 0x40)", "3.3V DC VCC Logic"),
-            ("Ext Power V+", "V+ Screw Terminal", "5V 10A UBEC Regulator", "High-Current Servo Power Rail", "5V DC @ 10A"),
-            ("Channel 0", "PWM Servo Out", "Camera Gimbal Pan Servo", "Camera Horizontal Pan Servo", "5V Servo Power"),
-            ("Channel 1", "PWM Servo Out", "Camera Gimbal Tilt Servo", "Camera Vertical Tilt Servo", "5V Servo Power")
-        ]
-
-        for item in pca_items:
-            pca_rows.append([
-                Paragraph(f"<b>{item[0]}</b>", cell_style),
-                Paragraph(item[1], cell_style),
-                Paragraph(f"<b>{item[2]}</b>", cell_style),
-                Paragraph(item[3], cell_style),
-                Paragraph(item[4], cell_style)
-            ])
-
-        t_pca = Table(pca_rows, colWidths=[110, 100, 140, 150, 90])
-        t_pca.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#003366')),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f5f8ff')])
-        ]))
-        story.append(t_pca)
-
-        # PAGE 3: BILL OF MATERIALS / PARTS LIST
-        story.append(PageBreak())
-        story.append(Paragraph("📦 4WD ROVER WITH ANIMATRONIC HEAD - BILL OF MATERIALS (PARTS LIST)", title_style))
-        story.append(Paragraph("Page 3 of 3: Complete Parts Specification, Quantities, Power Requirements & Subsystem Roles", subtitle_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
-
-        bom_rows = [[
-            Paragraph("Item #", header_cell_style),
-            Paragraph("Component / Part Name", header_cell_style),
-            Paragraph("Specification / Model", header_cell_style),
-            Paragraph("Qty", header_cell_style),
-            Paragraph("Subsystem Role & Interface", header_cell_style),
-            Paragraph("Power / Voltage", header_cell_style)
-        ]]
-
-        bom_data_items = [
-            ("1", "Raspberry Pi 4 or 5", "4GB / 8GB RAM Model B", "1", "Master Server, Gemini AI, Motor Controls & Sonar VAD", "5V @ 3A DC"),
-            ("2", "4WD Metal Chassis Kit", "Aluminum Alloy Frame with 4 Wheels", "1", "Rover Mechanical Body Frame with 4 Independent Motors", "6V - 12V DC"),
-            ("3", "L298N Dual H-Bridge Drivers", "Dual-Channel DC Motor Controllers", "3", "Driver 1 (Left Wheels), Driver 2 (Right Wheels), Driver 3 (Head/Neck)", "6V - 12V DC"),
-            ("4", "HC-SR04 Ultrasonic Sonar Sensors", "Ultrasonic Distance Sensors (4-Pin)", "4", "Front, Rear, Left, and Right Obstacle Avoidance Sonar", "5V DC Logic"),
-            ("5", "Black Animatronic Head Assembly", "Robotic Head with Moving Mouth & Neck", "1", "Head with Mouth DC Motor (Ch 1) and Pulsating Neck DC Motor (Ch 2)", "6V DC"),
-            ("6", "Pan/Tilt Camera Gimbal Servos", "SG90 / MG90S Micro Servos", "2", "2-DOF Pan & Tilt Camera Platform Servos", "5V DC"),
-            ("7", "Wide-Angle HD Web Camera", "USB Webcam / Pi CSI Camera", "1", "Live Video Stream & Gemini AI Computer Vision Input", "USB 5V DC"),
-            ("8", "LiPo Battery Power Supply", "2S 7.4V or 3S 11.1V LiPo Battery", "1", "Main High-Current Power Source for Rover Motors & Pi UBEC", "7.4V - 11.1V DC"),
-            ("9", "5V 10A UBEC Buck Converter", "Step-Down Voltage Regulator", "1", "Converts LiPo Battery Voltage to Clean +5V DC for Pi & Servos", "5V @ 10A DC Out"),
-            ("10", "IRLZ44N Logic-Level MOSFETs", "Discrete TO-220 N-Ch MOSFETs with 220Ω Gate Resistor & 22kΩ GND Pull-Down", "3", "Direct Pi GPIO PWM Dimmers for 12V Headlights, Underglow RGB, and Brake Lights", "3.3V DC PWM Gate / 12V DC Load")
-        ]
-
-        for item in bom_data_items:
-            bom_rows.append([
-                Paragraph(f"<b>{item[0]}</b>", cell_style),
-                Paragraph(f"<b>{item[1]}</b>", cell_style),
-                Paragraph(item[2], cell_style),
-                Paragraph(f"<b>{item[3]}</b>", cell_style),
-                Paragraph(item[4], cell_style),
-                Paragraph(item[5], cell_style)
-            ])
-
-        t_bom = Table(bom_rows, colWidths=[40, 130, 130, 35, 255, 130])
-        t_bom.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0055a5')),
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#dddddd')),
-            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.HexColor('#ffffff'), colors.HexColor('#f8fafd')])
-        ]))
-        story.append(t_bom)
-
-        # --- PAGE 4: OPERATING INSTRUCTIONS & SAFETY MANUAL ---
-        story.append(PageBreak())
-        story.append(Paragraph("📖 4WD ROVER OPERATING MANUAL & SAFETY GUIDE", title_style))
-        story.append(Paragraph("Page 4 of 4: Comprehensive Driving Instructions, Autonomous Avoidance, Gemini AI & Electrical Safety Rules", subtitle_style))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0055a5'), spaceBefore=2, spaceAfter=8))
-
-        guide_style = ParagraphStyle('GuideText', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=colors.HexColor('#111111'), spaceAfter=6)
-
-        story.append(Paragraph("⚡ 1. Power Supply & Electrical Safety Rules", heading_style))
-        story.append(Paragraph("<b>• Common Reference Ground Rail:</b> Connect Raspberry Pi GND, L298N GND, MOSFET source GND, and LiPo Battery (-) GND together to a shared common ground bus.", guide_style))
-        story.append(Paragraph("<b>• Discrete IRLZ44N MOSFET Wiring:</b> Connect each Pi GPIO PWM pin (GPIO 5 Headlights, GPIO 6 Underglow, GPIO 11 Brake Lights) through a <b>220Ω series resistor</b> to the MOSFET Gate (Pin 1) to protect the Pi pin. Connect a <b>22kΩ pull-down resistor</b> from Gate to GND to prevent flickering during bootup. Connect 12V DC Light (-) to Drain (Pin 2) and Source (Pin 3) to Common GND.", guide_style))
-
-        story.append(Paragraph("🤖 2. 4WD Drive Kinematics & Animatronic Head", heading_style))
-        story.append(Paragraph("<b>• 4 Independent Wheel Channels:</b> Driven across 2 L298N dual H-bridge motor drivers (L298 #1 Ch 1 FL Wheel, L298 #1 Ch 2 FR Wheel, L298 #2 Ch 1 RL Wheel, L298 #2 Ch 2 RR Wheel). L298 #3 drives the Animatronic Head mouth and neck DC motors.", guide_style))
-        story.append(Paragraph("<b>• PCA9685 Servos ONLY:</b> PCA9685 Channels 0 & 1 drive the 2-DOF Pan/Tilt Camera Gimbal servos.", guide_style))
-
         doc.build(story)
         return buffer.getvalue()
 
     def generate_hardware_script(self, data):
         script = f'''#!/usr/bin/env python3
 """
-4WD Rover Hardware Master Control Script
-Controls 4 wheels independently using 2x L298N Dual H-Bridge Motor Drivers,
-plus a 3rd L298N Dual Controller for Black Robotic Head Mouth & Pulsing Neck,
-and 4x HC-SR04 Ultrasonic Distance Sensors.
+Wall-Mounted Animatronic Deerhead Master Hardware Control Script
+Controls lower jaw mouth motor using L298 Channel 1 (GPIO 17, 27, 22)
+and head bowing motor using L298 Channel 2 (GPIO 4, 14, 15).
 """
 
 import time
 import RPi.GPIO as GPIO
 
-# --- GPIO Pin Definitions for 3x L298N Dual Motor Drivers ---
+# GPIO Pin Definitions for L298 Motor Driver
+# Channel 1: Lower Jaw Mouth Motor
+L298_ENA = 17  # Mouth PWM
+L298_IN1 = 27  # Mouth IN1
+L298_IN2 = 22  # Mouth IN2
 
-# L298 Controller #1 (Front Wheels)
-L298_1_ENA = 18  # Front-Left Wheel PWM
-L298_1_IN1 = 23  # Direction Pin 1
-L298_1_IN2 = 24  # Direction Pin 2
-L298_1_ENB = 19  # Front-Right Wheel PWM
-L298_1_IN3 = 25  # Direction Pin 3
-L298_1_IN4 = 8   # Direction Pin 4
+# Channel 2: Bowing Neck Motor
+L298_ENB = 4   # Bow PWM
+L298_IN3 = 14  # Bow IN3
+L298_IN4 = 15  # Bow IN4
 
-# L298 Controller #2 (Rear Wheels)
-L298_2_ENA = 12  # Rear-Left Wheel PWM
-L298_2_IN1 = 16  # Direction Pin 1
-L298_2_IN2 = 20  # Direction Pin 2
-L298_2_ENB = 13  # Rear-Right Wheel PWM
-L298_2_IN3 = 21  # Direction Pin 3
-L298_2_IN4 = 26  # Direction Pin 4
-
-# L298 Controller #3 (Black Robotic Head & Neck Motors)
-L298_3_ENA = 17  # Channel 1: Robotic Head Moving Mouth Motor PWM
-L298_3_IN1 = 27  # Direction Pin 1
-L298_3_IN2 = 22  # Direction Pin 2
-L298_3_ENB = 4   # Channel 2: Pulsating Neck Motor PWM
-L298_3_IN3 = 5   # Direction Pin 3
-L298_3_IN4 = 6   # Direction Pin 4
-
-# 4x HC-SR04 Ultrasonic Sensors (Trig / Echo)
-SENSORS = {{
-    "front": {{"trig": 5, "echo": 6}},
-    "rear":  {{"trig": 12, "echo": 13}},
-    "left":  {{"trig": 16, "echo": 20}},
-    "right": {{"trig": 21, "echo": 26}}
-}}
-
-# Initialize GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-PINS = [
-    L298_1_ENA, L298_1_IN1, L298_1_IN2, L298_1_ENB, L298_1_IN3, L298_1_IN4,
-    L298_2_ENA, L298_2_IN1, L298_2_IN2, L298_2_ENB, L298_2_IN3, L298_2_IN4,
-    L298_3_ENA, L298_3_IN1, L298_3_IN2, L298_3_ENB, L298_3_IN3, L298_3_IN4
-]
+PINS = [L298_ENA, L298_IN1, L298_IN2, L298_ENB, L298_IN3, L298_IN4]
 GPIO.setup(PINS, GPIO.OUT)
 
-pwm_fl    = GPIO.PWM(L298_1_ENA, 1000)
-pwm_fr    = GPIO.PWM(L298_1_ENB, 1000)
-pwm_rl    = GPIO.PWM(L298_2_ENA, 1000)
-pwm_rr    = GPIO.PWM(L298_2_ENB, 1000)
-pwm_mouth = GPIO.PWM(L298_3_ENA, 1000)
-pwm_neck  = GPIO.PWM(L298_3_ENB, 1000)
+pwm_mouth = GPIO.PWM(L298_ENA, 1000)
+pwm_bow   = GPIO.PWM(L298_ENB, 1000)
 
-for p in [pwm_fl, pwm_fr, pwm_rl, pwm_rr, pwm_mouth, pwm_neck]:
-    p.start(0)
+pwm_mouth.start(0)
+pwm_bow.start(0)
 
-def set_mouth_energized(active):
-    """L298 Controller #3 Channel 1: Drives robotic mouth motor in sync with speech."""
+def set_mouth_energized(active, speed=100):
+    """Channel 1: Opens lower jaw when active."""
     if active:
-        GPIO.output(L298_3_IN1, GPIO.HIGH)
-        GPIO.output(L298_3_IN2, GPIO.LOW)
-        pwm_mouth.ChangeDutyCycle(100)
+        GPIO.output(L298_IN1, GPIO.HIGH)
+        GPIO.output(L298_IN2, GPIO.LOW)
+        pwm_mouth.ChangeDutyCycle(speed)
     else:
+        GPIO.output(L298_IN1, GPIO.LOW)
+        GPIO.output(L298_IN2, GPIO.LOW)
         pwm_mouth.ChangeDutyCycle(0)
 
-def set_neck_pulsating(active):
-    """L298 Controller #3 Channel 2: Drives neck pulsating motor."""
+def set_bow_energized(active, speed=90):
+    """Channel 2: Bows deerhead forward when active."""
     if active:
-        GPIO.output(L298_3_IN3, GPIO.HIGH)
-        GPIO.output(L298_3_IN4, GPIO.LOW)
-        pwm_neck.ChangeDutyCycle(80)
+        GPIO.output(L298_IN3, GPIO.HIGH)
+        GPIO.output(L298_IN4, GPIO.LOW)
+        pwm_bow.ChangeDutyCycle(speed)
     else:
-        pwm_neck.ChangeDutyCycle(0)
+        GPIO.output(L298_IN3, GPIO.LOW)
+        GPIO.output(L298_IN4, GPIO.LOW)
+        pwm_bow.ChangeDutyCycle(0)
 
-def set_wheel(wheel, direction="stop", speed=100):
-    speed = max(0, min(100, speed))
-
-    if wheel == "fl":
-        p_in1, p_in2, pwm = L298_1_IN1, L298_1_IN2, pwm_fl
-    elif wheel == "fr":
-        p_in1, p_in2, pwm = L298_1_IN3, L298_1_IN4, pwm_fr
-    elif wheel == "rl":
-        p_in1, p_in2, pwm = L298_2_IN1, L298_2_IN2, pwm_rl
-    elif wheel == "rr":
-        p_in1, p_in2, pwm = L298_2_IN3, L298_2_IN4, pwm_rr
-    else:
-        return
-
-    if direction == "forward":
-        GPIO.output(p_in1, GPIO.HIGH)
-        GPIO.output(p_in2, GPIO.LOW)
-        pwm.ChangeDutyCycle(speed)
-    elif direction == "reverse":
-        GPIO.output(p_in1, GPIO.LOW)
-        GPIO.output(p_in2, GPIO.HIGH)
-        pwm.ChangeDutyCycle(speed)
-    else:
-        GPIO.output(p_in1, GPIO.LOW)
-        GPIO.output(p_in2, GPIO.LOW)
-        pwm.ChangeDutyCycle(0)
-
-def drive_rover(cmd, speed=100):
-    cmd = str(cmd).lower()
-    if cmd in ["forward", "run"]:
-        for w in ["fl", "fr", "rl", "rr"]: set_wheel(w, "forward", speed)
-    elif cmd in ["reverse", "backward"]:
-        for w in ["fl", "fr", "rl", "rr"]: set_wheel(w, "reverse", speed)
-    elif cmd in ["spin_left", "tank_left"]:
-        set_wheel("fl", "reverse", speed)
-        set_wheel("rl", "reverse", speed)
-        set_wheel("fr", "forward", speed)
-        set_wheel("rr", "forward", speed)
-    elif cmd in ["spin_right", "tank_right"]:
-        set_wheel("fl", "forward", speed)
-        set_wheel("rl", "forward", speed)
-        set_wheel("fr", "reverse", speed)
-        set_wheel("rr", "reverse", speed)
-    else:
-        for w in ["fl", "fr", "rl", "rr"]: set_wheel(w, "stop", 0)
+def perform_bow(duration=1.8):
+    print("Bowing deerhead forward...")
+    set_bow_energized(True)
+    time.sleep(duration)
+    set_bow_energized(False)
+    print("Returned upright.")
 
 def main():
-    print("Master 4WD Rover with Robotic Head Controller Online.")
-    print("L298 #1 & #2 (4 Wheels) + L298 #3 (Mouth & Neck Motors) Ready.")
+    print("Wall-Mounted Animatronic Deerhead Controller Online.")
+    print("Testing Mouth (Channel 1) and Bow (Channel 2)...")
     set_mouth_energized(True)
-    set_neck_pulsating(True)
-    time.sleep(2)
+    time.sleep(1.0)
     set_mouth_energized(False)
-    set_neck_pulsating(False)
+    time.sleep(0.5)
+    perform_bow(1.8)
 
 if __name__ == "__main__":
     try:
@@ -947,9 +652,9 @@ if __name__ == "__main__":
             print(f"SSL cert load warning: {e}")
 
     display_host = "localhost" if HOST in ["", "0.0.0.0", "127.0.0.1"] else HOST
-    print(f"Starting Multithreaded 4WD Rover Control Server on http://{display_host}:{PORT} (http & https supported)")
+    print(f"Starting Multithreaded Animatronic Deerhead Server on http://{display_host}:{PORT} (http & https supported)")
     bind_host = "" if HOST == "0.0.0.0" else HOST
-    with ThreadingReusableTCPServer((bind_host, PORT), RoverRequestHandler) as httpd:
+    with ThreadingReusableTCPServer((bind_host, PORT), DeerheadRequestHandler) as httpd:
         httpd.ssl_context = ssl_ctx
         try:
             httpd.serve_forever()

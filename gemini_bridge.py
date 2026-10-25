@@ -9,12 +9,13 @@ from google.genai import types
 class GeminiHexapodBridge:
     def __init__(self):
         self.system_instruction = (
-            "You are the friendly, intelligent AI brain of a 4WD Rover robot equipped with 2x L298 dual-channel motor controllers, camera, and microphone. "
+            "You are the friendly, intelligent, and charismatic AI brain of an Animatronic Deerhead mounted on the wall. "
+            "Your mouth opens and closes using Channel 1 of an L298 motor driver in sync with your speech, and you bow using Channel 2. "
             "Your job is to:\n"
-            "1. Produce warm, friendly, concise, conversational responses and ask the user questions about what they want the rover to do.\n"
+            "1. Produce warm, witty, concise, conversational responses and engage naturally with humans in the room.\n"
             "2. Describe what you see in front of you clearly and concisely when presented with camera images.\n"
-            "3. Control the rover using function calls whenever the user asks the rover to move, drive, turn, spin, or stop.\n"
-            "Always respond to all spoken voice commands naturally and keep responses concise (1-2 sentences)."
+            "3. Control your animatronic movements (bowing, singing, mouth gestures) using function calls whenever requested.\n"
+            "Always respond naturally and keep spoken responses concise (1-2 sentences)."
         )
 
     def detect_hand_gestures(self, frame):
@@ -72,11 +73,11 @@ class GeminiHexapodBridge:
 
             gesture = "None"
             if finger_count >= 4:
-                gesture = "5_FINGERS_FORWARD"
+                gesture = "5_FINGERS_BOW"
             elif finger_count == 2 or finger_count == 3:
-                gesture = "2_FINGERS_WAVE"
+                gesture = "2_FINGERS_TALK"
             elif finger_count == 1:
-                gesture = "1_FINGER_ATTACK"
+                gesture = "1_FINGER_SING"
 
             return gesture, finger_count, frame
         except Exception as e:
@@ -85,7 +86,7 @@ class GeminiHexapodBridge:
     def generate_chat_response(self, api_key, user_text="", image_bytes=None):
         if not api_key:
             return {
-                "text": "Please provide a valid Google Gemini API Key in the settings tab to enable AI vision & voice features.",
+                "text": "Please provide a valid Google Gemini API Key in settings to enable AI vision & voice features.",
                 "action": None
             }
 
@@ -94,39 +95,35 @@ class GeminiHexapodBridge:
         tools = [
             types.Tool(function_declarations=[
                 types.FunctionDeclaration(
-                    name="rover_drive",
-                    description="Drives the 4WD Rover in a specified direction.",
+                    name="deerhead_bow",
+                    description="Bows the animatronic deerhead forward on its wall mount.",
                     parameters=types.Schema(
                         type=types.Type.OBJECT,
                         properties={
-                            "direction": types.Schema(
-                                type=types.Type.STRING,
-                                enum=["forward", "reverse", "spin_left", "spin_right", "turn_left", "turn_right"]
-                            ),
-                            "speed": types.Schema(type=types.Type.NUMBER),
                             "duration_seconds": types.Schema(type=types.Type.NUMBER)
-                        },
-                        required=["direction"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="rover_set_wheels",
-                    description="Independently controls each of the 4 wheels.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={
-                            "fl_dir": types.Schema(type=types.Type.STRING, enum=["forward", "reverse", "stop"]),
-                            "fr_dir": types.Schema(type=types.Type.STRING, enum=["forward", "reverse", "stop"]),
-                            "rl_dir": types.Schema(type=types.Type.STRING, enum=["forward", "reverse", "stop"]),
-                            "rr_dir": types.Schema(type=types.Type.STRING, enum=["forward", "reverse", "stop"]),
-                            "speed": types.Schema(type=types.Type.NUMBER)
                         }
                     )
                 ),
                 types.FunctionDeclaration(
-                    name="rover_stop",
-                    description="Stops all 4 wheels of the rover immediately.",
-                    parameters=types.Schema(type=types.Type.OBJECT, properties={})
+                    name="deerhead_mouth",
+                    description="Controls the mouth motor (Channel 1 of L298).",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "state": types.Schema(type=types.Type.STRING, enum=["open", "close", "pulse"])
+                        },
+                        required=["state"]
+                    )
+                ),
+                types.FunctionDeclaration(
+                    name="deerhead_sing",
+                    description="Triggers a song or musical performance by the deerhead.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "song_name": types.Schema(type=types.Type.STRING)
+                        }
+                    )
                 )
             ])
         ]
@@ -165,7 +162,7 @@ class GeminiHexapodBridge:
                     "args": call.args
                 }
                 if not text_response:
-                    text_response = f"Executing command: {call.name}"
+                    text_response = f"Executing action: {call.name}"
 
             return {
                 "text": text_response,
@@ -190,25 +187,24 @@ class GeminiHexapodBridge:
         tools = [
             types.Tool(function_declarations=[
                 types.FunctionDeclaration(
-                    name="rover_drive",
-                    description="Drives the 4WD Rover in a specified direction.",
+                    name="deerhead_bow",
+                    description="Bows the animatronic deerhead forward on its wall mount.",
                     parameters=types.Schema(
                         type=types.Type.OBJECT,
                         properties={
-                            "direction": types.Schema(
-                                type=types.Type.STRING,
-                                enum=["forward", "reverse", "spin_left", "spin_right", "turn_left", "turn_right"]
-                            ),
-                            "speed": types.Schema(type=types.Type.NUMBER),
                             "duration_seconds": types.Schema(type=types.Type.NUMBER)
-                        },
-                        required=["direction"]
+                        }
                     )
                 ),
                 types.FunctionDeclaration(
-                    name="rover_stop",
-                    description="Stops all 4 wheels of the rover immediately.",
-                    parameters=types.Schema(type=types.Type.OBJECT, properties={})
+                    name="deerhead_sing",
+                    description="Triggers a song or musical performance.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "song_name": types.Schema(type=types.Type.STRING)
+                        }
+                    )
                 )
             ])
         ]
@@ -255,7 +251,7 @@ class GeminiHexapodBridge:
                     "args": call.args
                 }
                 if not text_response:
-                    text_response = f"Executing voice command: {call.name}"
+                    text_response = f"Executing voice action: {call.name}"
 
             return {
                 "text": text_response,

@@ -511,18 +511,18 @@ class GeminiAIController {
                 const badge = document.getElementById('gestureBadge');
                 if (!badge) return;
 
-                if (data.gesture === '5_FINGERS_FORWARD') {
-                    badge.textContent = '🖐️ 5 Fingers: Driving Forward!';
-                    badge.style.color = 'var(--accent-green)';
-                    if (this.app.setRoverCommand) this.app.setRoverCommand('forward');
-                } else if (data.gesture === '2_FINGERS_WAVE') {
-                    badge.textContent = '✌️ 2 Fingers: Tank Spin Left';
-                    badge.style.color = 'var(--accent-blue)';
-                    if (this.app.setRoverCommand) this.app.setRoverCommand('spin_left');
-                } else if (data.gesture === '1_FINGER_ATTACK') {
-                    badge.textContent = '☝️ 1 Finger: Reverse Drive';
+                if (data.gesture === '5_FINGERS_BOW') {
+                    badge.textContent = '🖐️ 5 Fingers: Bowing Deerhead!';
                     badge.style.color = 'var(--accent-orange)';
-                    if (this.app.setRoverCommand) this.app.setRoverCommand('reverse');
+                    if (this.app.triggerBow) this.app.triggerBow(2.0);
+                } else if (data.gesture === '2_FINGERS_TALK') {
+                    badge.textContent = '✌️ 2 Fingers: Mouth Open';
+                    badge.style.color = 'var(--accent-green)';
+                    if (this.app.setMouthEnergized) this.app.setMouthEnergized(true);
+                } else if (data.gesture === '1_FINGER_SING') {
+                    badge.textContent = '☝️ 1 Finger: Sing Song';
+                    badge.style.color = 'var(--accent-cyan)';
+                    if (this.app.triggerBow) this.app.triggerBow(1.5);
                 } else {
                     badge.textContent = 'Gesture: Monitoring Camera...';
                     badge.style.color = 'var(--accent-cyan)';
@@ -539,17 +539,15 @@ class GeminiAIController {
     executeAIAction(action) {
         if (!action || !action.name) return;
 
-        if (action.name === 'rover_drive' || action.name === 'hexapod_walk') {
-            const dir = action.args.direction || 'forward';
-            const speed = action.args.speed || 100;
-            if (this.app.setRoverCommand) this.app.setRoverCommand(dir, speed);
-        } else if (action.name === 'rover_set_wheels') {
-            const args = action.args || {};
-            if (this.app.setWheelState) {
-                this.app.setWheelState(args.fl_dir, args.fr_dir, args.rl_dir, args.rr_dir, args.speed || 100);
-            }
-        } else if (action.name === 'rover_stop' || action.name === 'hexapod_stop') {
-            if (this.app.setRoverCommand) this.app.setRoverCommand('stop');
+        if (action.name === 'deerhead_bow' || action.name === 'bow') {
+            const duration = action.args ? (action.args.duration_seconds || 1.8) : 1.8;
+            if (this.app.triggerBow) this.app.triggerBow(duration);
+        } else if (action.name === 'deerhead_mouth') {
+            const state = action.args ? action.args.state : 'open';
+            const energized = (state === 'open' || state === 'pulse');
+            if (this.app.setMouthEnergized) this.app.setMouthEnergized(energized);
+        } else if (action.name === 'deerhead_sing') {
+            if (this.app.triggerBow) this.app.triggerBow(1.5);
         }
     }
 }

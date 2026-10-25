@@ -1,20 +1,18 @@
 /**
- * Rover MP3 Music Import & Audio-Driven Dance Synchronizer Engine
+ * Deerhead MP3 Music Import & Performance Synchronizer Engine
  * Features:
- * - Automatic MP3 file import directly to Rover/audio subfolder
- * - MP3 Picker dropdown selector & track list
- * - Full audio playback navigation controls (Play/Pause, Stop, Prev, Next, Loop, Seek, Volume)
- * - Web Audio API real-time beat analysis for Mouth Lipsync, Neck Bobbing, and Wheel Dancing
+ * - Automatic MP3 file import & playlist management
+ * - Web Audio API real-time beat & vocal frequency analysis for Mouth Lipsync (L298 Ch1) and Rhythmic Head Bowing (L298 Ch2)
+ * - Navigation & playback controls (Play/Pause, Stop, Prev, Next, Loop, Seek, Volume)
  */
 
-class RoverDanceEngine {
+class DeerheadPerformanceEngine {
     constructor(appOrchestrator) {
         this.app = appOrchestrator;
-        this.danceEnabled = true; // Default dance mode enabled
+        this.syncEnabled = true;
         this.currentTrack = null;
         this.playlist = [];
-        this.sensitivity = 1.0; // 50% to 200%
-        this.danceStyle = 'freestyle';
+        this.sensitivity = 1.0;
         this.isLooping = false;
 
         // Web Audio API State
@@ -23,44 +21,27 @@ class RoverDanceEngine {
         this.sourceNode = null;
         this.audioPlayer = document.getElementById('danceAudioPlayer');
 
-        // Beat Detection State
+        // Beat & Vocal Detection State
         this.bassEnergyHistory = [];
         this.historySize = 30;
-        this.lastBeatTime = 0;
-        this.beatCooldown = 280; // ms
-        this.danceStepIndex = 0;
-        this.currentMoveName = "STOPPED";
+        this.lastBowTime = 0;
+        this.bowCooldown = 1500; // Minimum ms between auto-bows on beats
 
         // Motor State Cache
         this.lastMouthState = false;
-        this.lastNeckState = false;
-
-        // Dance Routines Catalogue
-        this.movesCatalogue = {
-            "spin_left": { fl: "reverse", fr: "forward", rl: "reverse", rr: "forward", label: "↺ Spin Left" },
-            "spin_right": { fl: "forward", fr: "reverse", rl: "forward", rr: "reverse", label: "↻ Spin Right" },
-            "wiggle_a": { fl: "forward", fr: "reverse", rl: "reverse", rr: "forward", label: "🔀 Crab Wiggle A" },
-            "wiggle_b": { fl: "reverse", fr: "forward", rl: "forward", rr: "reverse", label: "🔀 Crab Wiggle B" },
-            "pivot_left": { fl: "stop", fr: "forward", rl: "stop", rr: "forward", label: "↪️ Pivot Left" },
-            "pivot_right": { fl: "forward", fr: "stop", rl: "forward", rr: "stop", label: "↩️ Pivot Right" },
-            "pulse_fwd": { fl: "forward", fr: "forward", rl: "forward", rr: "forward", label: "▲ Step Forward" },
-            "pulse_rev": { fl: "reverse", fr: "reverse", rl: "reverse", rr: "reverse", label: "▼ Step Reverse" }
-        };
+        this.lastBowState = false;
 
         this.initUI();
         this.loadPlaylist();
     }
 
     initUI() {
-        // Automatic MP3 Import Button
         const btnAutoImport = document.getElementById('btnAutoImportMp3');
         const fileInput = document.getElementById('mp3FileInput');
         const dropZone = document.getElementById('dropZone');
 
         if (btnAutoImport && fileInput) {
-            btnAutoImport.addEventListener('click', () => {
-                fileInput.click();
-            });
+            btnAutoImport.addEventListener('click', () => fileInput.click());
         }
 
         if (dropZone && fileInput) {
@@ -90,24 +71,20 @@ class RoverDanceEngine {
             });
         }
 
-        // MP3 Picker Dropdown Select
         const selectMp3Track = document.getElementById('selectMp3Track');
         if (selectMp3Track) {
             selectMp3Track.addEventListener('change', (e) => {
                 const track = e.target.value;
-                if (track) {
-                    this.selectAndPlayTrack(track);
-                }
+                if (track) this.selectAndPlayTrack(track);
             });
         }
 
-        // Playback Navigation Controls
         const btnPlayPause = document.getElementById('btnPlayPauseNav');
         const btnStopNav = document.getElementById('btnStopNav');
         const btnPrevTrack = document.getElementById('btnPrevTrack');
         const btnNextTrack = document.getElementById('btnNextTrack');
         const btnLoopToggle = document.getElementById('btnLoopToggle');
-        const btnToggleDance = document.getElementById('btnToggleDance');
+        const btnToggleSync = document.getElementById('btnToggleDance');
 
         if (btnPlayPause) {
             btnPlayPause.addEventListener('click', () => {
@@ -131,18 +108,13 @@ class RoverDanceEngine {
                     this.audioPlayer.pause();
                     this.audioPlayer.currentTime = 0;
                 }
-                this.stopDanceMotors();
+                this.stopPerformance();
                 this.updatePlayPauseUI(false);
             });
         }
 
-        if (btnPrevTrack) {
-            btnPrevTrack.addEventListener('click', () => this.playPrevTrack());
-        }
-
-        if (btnNextTrack) {
-            btnNextTrack.addEventListener('click', () => this.playNextTrack());
-        }
+        if (btnPrevTrack) btnPrevTrack.addEventListener('click', () => this.playPrevTrack());
+        if (btnNextTrack) btnNextTrack.addEventListener('click', () => this.playNextTrack());
 
         if (btnLoopToggle) {
             btnLoopToggle.addEventListener('click', () => {
@@ -153,23 +125,22 @@ class RoverDanceEngine {
             });
         }
 
-        if (btnToggleDance) {
-            btnToggleDance.addEventListener('click', () => {
-                this.danceEnabled = !this.danceEnabled;
-                btnToggleDance.textContent = this.danceEnabled ? '🕺 Beat Dance: ON' : '🕺 Beat Dance: OFF';
-                btnToggleDance.style.background = this.danceEnabled 
+        if (btnToggleSync) {
+            btnToggleSync.addEventListener('click', () => {
+                this.syncEnabled = !this.syncEnabled;
+                btnToggleSync.textContent = this.syncEnabled ? '🎵 Audio Sync: ON' : '🎵 Audio Sync: OFF';
+                btnToggleSync.style.background = this.syncEnabled 
                     ? 'linear-gradient(135deg, var(--accent-cyan), var(--accent-purple))' 
                     : 'var(--panel-bg)';
 
-                if (!this.danceEnabled) {
-                    this.stopDanceMotors();
+                if (!this.syncEnabled) {
+                    this.stopPerformance();
                 } else if (this.audioPlayer && !this.audioPlayer.paused) {
                     this.initWebAudioAnalyser();
                 }
             });
         }
 
-        // Seek Slider & Volume Slider
         const seekSlider = document.getElementById('seekAudioSlider');
         const volumeSlider = document.getElementById('volumeAudioSlider');
         const valVolumeText = document.getElementById('valVolumeText');
@@ -191,7 +162,6 @@ class RoverDanceEngine {
             });
         }
 
-        // Dance Sensitivity Slider
         const slideSens = document.getElementById('slideDanceSensitivity');
         const valSens = document.getElementById('valDanceSensitivity');
         if (slideSens) {
@@ -202,15 +172,6 @@ class RoverDanceEngine {
             });
         }
 
-        // Dance Style Selector
-        const selectStyle = document.getElementById('selectDanceStyle');
-        if (selectStyle) {
-            selectStyle.addEventListener('change', (e) => {
-                this.danceStyle = e.target.value;
-            });
-        }
-
-        // Audio Player Progress & Time Events
         if (this.audioPlayer) {
             this.audioPlayer.addEventListener('play', () => {
                 this.updatePlayPauseUI(true);
@@ -219,24 +180,17 @@ class RoverDanceEngine {
 
             this.audioPlayer.addEventListener('pause', () => {
                 this.updatePlayPauseUI(false);
-                this.stopDanceMotors();
+                this.stopPerformance();
             });
 
             this.audioPlayer.addEventListener('ended', () => {
                 this.updatePlayPauseUI(false);
-                this.stopDanceMotors();
-                if (!this.isLooping) {
-                    this.playNextTrack();
-                }
+                this.stopPerformance();
+                if (!this.isLooping) this.playNextTrack();
             });
 
-            this.audioPlayer.addEventListener('timeupdate', () => {
-                this.updateTimeAndProgress();
-            });
-
-            this.audioPlayer.addEventListener('loadedmetadata', () => {
-                this.updateTimeAndProgress();
-            });
+            this.audioPlayer.addEventListener('timeupdate', () => this.updateTimeAndProgress());
+            this.audioPlayer.addEventListener('loadedmetadata', () => this.updateTimeAndProgress());
         }
     }
 
@@ -251,33 +205,22 @@ class RoverDanceEngine {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const base64Data = e.target.result;
-
                 fetch('/api/audio/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        filename: file.name,
-                        data: base64Data
-                    })
+                    body: JSON.stringify({ filename: file.name, data: base64Data })
                 })
                 .then(res => res.json())
                 .then(data => {
                     completed++;
-                    if (data.success) {
-                        lastUploadedName = data.filename;
-                    }
+                    if (data.success) lastUploadedName = data.filename;
                     if (completed === filesArr.length) {
                         this.loadPlaylist(() => {
-                            if (lastUploadedName) {
-                                this.selectAndPlayTrack(lastUploadedName);
-                            }
+                            if (lastUploadedName) this.selectAndPlayTrack(lastUploadedName);
                         });
                     }
                 })
-                .catch(err => {
-                    console.error('Import error:', err);
-                    completed++;
-                });
+                .catch(err => completed++);
             };
             reader.readAsDataURL(file);
         });
@@ -289,10 +232,9 @@ class RoverDanceEngine {
         .then(data => {
             this.playlist = data.files || [];
 
-            // Update MP3 Picker Dropdown (`#selectMp3Track`)
             const selectMp3 = document.getElementById('selectMp3Track');
             if (selectMp3) {
-                selectMp3.innerHTML = '<option value="">-- Select an MP3 Track --</option>';
+                selectMp3.innerHTML = '<option value="">-- Select Song Track --</option>';
                 this.playlist.forEach(f => {
                     const opt = document.createElement('option');
                     opt.value = f.name;
@@ -302,17 +244,15 @@ class RoverDanceEngine {
                 });
             }
 
-            // Update Playlist Container Table/List
             const container = document.getElementById('playlistContainer');
             if (container) {
                 container.innerHTML = '';
                 if (this.playlist.length === 0) {
-                    container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px;">No MP3 tracks imported yet. Click "Import MP3 Track" above!</div>';
+                    container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px;">No song tracks imported yet. Click "Import MP3 Track" above!</div>';
                 } else {
                     this.playlist.forEach(file => {
                         const item = document.createElement('div');
                         item.className = 'track-item' + (this.currentTrack === file.name ? ' active' : '');
-
                         const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
 
                         item.innerHTML = `
@@ -321,7 +261,7 @@ class RoverDanceEngine {
                                 <div class="track-meta">${sizeMb} MB</div>
                             </div>
                             <div class="track-actions">
-                                <button class="btn-preset primary btn-play-track" style="padding: 4px 8px; font-size: 0.75rem;">▶ Play & Dance</button>
+                                <button class="btn-preset primary btn-play-track" style="padding: 4px 8px; font-size: 0.75rem;">🎤 Play & Sing</button>
                                 <button class="btn-preset btn-delete-track" style="background: var(--accent-red); color: #fff; padding: 4px 8px; font-size: 0.75rem;">🗑️</button>
                             </div>
                         `;
@@ -342,25 +282,24 @@ class RoverDanceEngine {
 
             if (callback) callback();
         })
-        .catch(err => console.error('Audio list load error:', err));
+        .catch(err => console.error('Audio list error:', err));
     }
 
     selectAndPlayTrack(filename) {
         this.currentTrack = filename;
-
         const titleEl = document.getElementById('nowPlayingTitle');
-        if (titleEl) titleEl.textContent = `🎵 Playing: ${filename}`;
+        if (titleEl) titleEl.textContent = `🎤 Singing: ${filename}`;
 
         const selectMp3 = document.getElementById('selectMp3Track');
         if (selectMp3) selectMp3.value = filename;
 
         if (this.audioPlayer) {
             this.audioPlayer.src = `/audio/${encodeURIComponent(filename)}`;
-            this.audioPlayer.play().catch(err => console.warn('Audio play error:', err));
+            this.audioPlayer.play().catch(err => console.warn('Play error:', err));
         }
 
         this.updatePlayPauseUI(true);
-        this.loadPlaylist(); // Refresh active highlight
+        this.loadPlaylist();
     }
 
     playNextTrack() {
@@ -378,7 +317,7 @@ class RoverDanceEngine {
     }
 
     deleteTrack(filename) {
-        if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+        if (!confirm(`Delete track ${filename}?`)) return;
 
         fetch('/api/audio/delete', {
             method: 'POST',
@@ -394,14 +333,13 @@ class RoverDanceEngine {
                         this.audioPlayer.pause();
                         this.audioPlayer.src = '';
                     }
-                    this.stopDanceMotors();
+                    this.stopPerformance();
                     const titleEl = document.getElementById('nowPlayingTitle');
                     if (titleEl) titleEl.textContent = 'No Track Selected';
                 }
                 this.loadPlaylist();
             }
-        })
-        .catch(err => console.error('Delete track error:', err));
+        });
     }
 
     updatePlayPauseUI(isPlaying) {
@@ -416,7 +354,6 @@ class RoverDanceEngine {
 
     updateTimeAndProgress() {
         if (!this.audioPlayer) return;
-
         const curTime = this.audioPlayer.currentTime || 0;
         const duration = this.audioPlayer.duration || 0;
 
@@ -426,7 +363,6 @@ class RoverDanceEngine {
 
         if (curEl) curEl.textContent = this.formatTime(curTime);
         if (durEl) durEl.textContent = this.formatTime(duration);
-
         if (seekSlider && duration > 0) {
             seekSlider.value = (curTime / duration) * 100;
         }
@@ -441,14 +377,10 @@ class RoverDanceEngine {
 
     initWebAudioAnalyser() {
         if (!this.audioPlayer) return;
-
         if (!this.audioCtx) {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume();
-        }
+        if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
 
         if (!this.sourceNode) {
             try {
@@ -460,32 +392,29 @@ class RoverDanceEngine {
                 this.sourceNode.connect(this.analyser);
                 this.analyser.connect(this.audioCtx.destination);
             } catch (e) {
-                console.warn('WebAudio source node error:', e);
+                console.warn('Audio node error:', e);
             }
         }
-
         this.startAnalysisLoop();
     }
 
     startAnalysisLoop() {
         if (this.loopRunning) return;
         this.loopRunning = true;
-
         const freqData = new Uint8Array(128);
 
         const updateFrame = () => {
             if (!this.analyser || !this.audioPlayer || this.audioPlayer.paused) {
                 this.loopRunning = false;
-                this.stopDanceMotors();
+                this.stopPerformance();
                 return;
             }
 
             this.analyser.getByteFrequencyData(freqData);
-
-            if (this.danceEnabled) {
+            if (this.syncEnabled) {
                 this.processAudioFrame(freqData);
             } else {
-                this.stopDanceMotors();
+                this.stopPerformance();
             }
 
             requestAnimationFrame(updateFrame);
@@ -495,41 +424,32 @@ class RoverDanceEngine {
     }
 
     processAudioFrame(freqData) {
-        // 1. Overall Volume / Vocal Range (Bins 10-60 ~ 300Hz-2500Hz)
+        // Vocal Range Frequency Analysis for Mouth Lipsync (L298 Ch1)
         let vocalSum = 0;
         for (let i = 10; i < 60; i++) vocalSum += freqData[i];
         const vocalAvg = vocalSum / 50.0;
-        const mouthActive = vocalAvg > (18 / this.sensitivity);
+        const mouthActive = vocalAvg > (16 / this.sensitivity);
 
-        // 2. Mid-Frequency Rhythm (Bins 8-25 ~ 200Hz-800Hz)
-        let midSum = 0;
-        for (let i = 8; i < 25; i++) midSum += freqData[i];
-        const midAvg = midSum / 17.0;
-        const neckActive = midAvg > (25 / this.sensitivity);
-
-        // 3. Low Bass Energy (Bins 1-6 ~ 20Hz-150Hz)
+        // Low Bass Energy Analysis for Rhythmic Head Bowing (L298 Ch2)
         let bassSum = 0;
         for (let i = 1; i <= 6; i++) bassSum += freqData[i];
         const bassAvg = bassSum / 6.0;
 
-        // Maintain Rolling Bass Energy History
         this.bassEnergyHistory.push(bassAvg);
-        if (this.bassEnergyHistory.length > this.historySize) {
-            this.bassEnergyHistory.shift();
-        }
+        if (this.bassEnergyHistory.length > this.historySize) this.bassEnergyHistory.shift();
 
         const histAvg = this.bassEnergyHistory.reduce((a, b) => a + b, 0) / (this.bassEnergyHistory.length || 1);
-        const beatThreshold = (histAvg * 1.25) / this.sensitivity;
+        const beatThreshold = (histAvg * 1.35) / this.sensitivity;
 
         const now = performance.now();
-        const isBeat = (bassAvg > 20) && (bassAvg > beatThreshold) && (now - this.lastBeatTime > (this.beatCooldown / this.sensitivity));
+        const isBeatDrop = (bassAvg > 35) && (bassAvg > beatThreshold) && (now - this.lastBowTime > this.bowCooldown);
 
-        if (isBeat) {
-            this.lastBeatTime = now;
-            this.triggerNextDanceMove();
+        if (isBeatDrop) {
+            this.lastBowTime = now;
+            if (this.app.triggerBow) this.app.triggerBow(1.2);
         }
 
-        // Update UI Telemetry
+        // Update Energy UI Bar
         const barEl = document.getElementById('danceBeatEnergyBar');
         const valEl = document.getElementById('danceBeatEnergyVal');
         const bassPct = Math.min(100, Math.round((bassAvg / 255.0) * 100));
@@ -537,99 +457,47 @@ class RoverDanceEngine {
         if (barEl) barEl.style.width = `${bassPct}%`;
         if (valEl) valEl.textContent = `${bassPct}%`;
 
-        // Synchronize Mouth & Neck Hardware States
+        // Update Mouth State
         if (mouthActive !== this.lastMouthState) {
             this.lastMouthState = mouthActive;
             if (this.app.setMouthEnergized) this.app.setMouthEnergized(mouthActive);
             const statusMouth = document.getElementById('statusDanceMouth');
             if (statusMouth) {
-                statusMouth.textContent = mouthActive ? 'TALKING / LIPSYNC' : 'IDLE';
+                statusMouth.textContent = mouthActive ? 'SINGING / TALKING' : 'CLOSED';
                 statusMouth.style.color = mouthActive ? 'var(--accent-green)' : 'var(--text-muted)';
             }
-        }
-
-        if (neckActive !== this.lastNeckState) {
-            this.lastNeckState = neckActive;
-            if (this.app.setNeckPulsating) this.app.setNeckPulsating(neckActive);
-            const statusNeck = document.getElementById('statusDanceNeck');
-            if (statusNeck) {
-                statusNeck.textContent = neckActive ? 'BOBBING' : 'IDLE';
-                statusNeck.style.color = neckActive ? 'var(--accent-purple)' : 'var(--text-muted)';
-            }
-        }
-
-        // Send head/neck L298 motor hardware commands if changed
-        fetch('/api/motor/head_neck', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mouth: mouthActive, neck: neckActive })
-        }).catch(e => {});
-    }
-
-    triggerNextDanceMove() {
-        this.danceStepIndex++;
-
-        let moveKey = "spin_left";
-
-        if (this.danceStyle === 'spin_frenzy') {
-            moveKey = (this.danceStepIndex % 2 === 0) ? "spin_left" : "spin_right";
-        } else if (this.danceStyle === 'wiggle_crab') {
-            const seq = ["wiggle_a", "wiggle_b", "spin_left", "spin_right"];
-            moveKey = seq[this.danceStepIndex % seq.length];
-        } else if (this.danceStyle === 'pivot_bounce') {
-            const seq = ["pivot_left", "pivot_right", "pulse_fwd", "pulse_rev"];
-            moveKey = seq[this.danceStepIndex % seq.length];
-        } else {
-            // Freestyle Routine Sequence
-            const freestyleSeq = [
-                "spin_left", "spin_right", "wiggle_a", "wiggle_b",
-                "pivot_left", "pivot_right", "pulse_fwd", "pulse_rev"
-            ];
-            moveKey = freestyleSeq[this.danceStepIndex % freestyleSeq.length];
-        }
-
-        const moveConfig = this.movesCatalogue[moveKey] || this.movesCatalogue["spin_left"];
-        this.currentMoveName = moveConfig.label;
-
-        // Apply 4-Wheel Motor State to 3D Renderer & Hardware Motors
-        if (this.app && this.app.setWheelState) {
-            this.app.setWheelState(moveConfig.fl, moveConfig.fr, moveConfig.rl, moveConfig.rr, 100);
-        }
-
-        const statusWheel = document.getElementById('statusDanceWheel');
-        if (statusWheel) {
-            statusWheel.textContent = moveConfig.label;
-            statusWheel.style.color = 'var(--accent-cyan)';
+            fetch('/api/deerhead/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mouth: mouthActive })
+            }).catch(e => {});
         }
     }
 
-    stopDanceMotors() {
+    stopPerformance() {
         if (this.app) {
-            if (this.app.setRoverCommand) this.app.setRoverCommand('stop');
             if (this.app.setMouthEnergized) this.app.setMouthEnergized(false);
-            if (this.app.setNeckPulsating) this.app.setNeckPulsating(false);
+            if (this.app.setBowEnergized) this.app.setBowEnergized(false);
         }
 
         this.lastMouthState = false;
-        this.lastNeckState = false;
+        this.lastBowState = false;
 
         const statusMouth = document.getElementById('statusDanceMouth');
-        const statusNeck = document.getElementById('statusDanceNeck');
-        const statusWheel = document.getElementById('statusDanceWheel');
+        const statusBow = document.getElementById('statusDanceNeck');
 
-        if (statusMouth) { statusMouth.textContent = 'IDLE'; statusMouth.style.color = 'var(--text-muted)'; }
-        if (statusNeck) { statusNeck.textContent = 'IDLE'; statusNeck.style.color = 'var(--text-muted)'; }
-        if (statusWheel) { statusWheel.textContent = 'STOPPED'; statusWheel.style.color = 'var(--text-muted)'; }
+        if (statusMouth) { statusMouth.textContent = 'CLOSED'; statusMouth.style.color = 'var(--text-muted)'; }
+        if (statusBow) { statusBow.textContent = 'UPRIGHT'; statusBow.style.color = 'var(--text-muted)'; }
 
         const barEl = document.getElementById('danceBeatEnergyBar');
         const valEl = document.getElementById('danceBeatEnergyVal');
         if (barEl) barEl.style.width = '0%';
         if (valEl) valEl.textContent = '0%';
 
-        fetch('/api/motor/head_neck', {
+        fetch('/api/deerhead/control', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mouth: false, neck: false })
+            body: JSON.stringify({ mouth: false, bow: false })
         }).catch(e => {});
     }
 }
