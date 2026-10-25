@@ -264,24 +264,197 @@
 
     <!-- VIEW 3: WIRING SCHEMATIC -->
     <div class="view-screen" id="viewWiring">
-        <div class="panel center" style="max-width:900px; margin:20px auto;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <div class="section-title">🔌 Wall-Mounted Deerhead Hardware Wiring Diagram</div>
-                <a href="/api/export-pdf" target="_blank" class="btn-preset primary" style="text-decoration:none; padding:6px 12px;">📄 Download PDF Schematic</a>
+        <div class="panel center" style="max-width:950px; margin:20px auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div>
+                    <div class="section-title">🔌 Wall-Mounted Deerhead Hardware Wiring Diagram</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+                        Hardware connections for Raspberry Pi 4/5, L298 Dual H-Bridge Driver, Power Rails, and Actuators.
+                    </div>
+                </div>
+                <a href="/api/export-pdf" target="_blank" class="btn-preset primary" style="text-decoration:none; padding:8px 16px;">📄 Download PDF Schematic</a>
             </div>
-            <iframe src="/WIRING_DIAGRAM.md" style="width:100%; height:500px; background:#fff; border-radius:8px; border:none;"></iframe>
+
+            <!-- Graphical Circuit Architecture Box -->
+            <div class="leg-card" style="margin-bottom:16px; background:rgba(15,23,42,0.9); border:1px solid var(--accent-cyan);">
+                <div class="leg-title" style="color:var(--accent-cyan); margin-bottom:10px;">⚡ SYSTEM HARDWARE ARCHITECTURE MAP</div>
+                <pre style="font-family: monospace; font-size:0.75rem; color:#a5f3fc; background:#080d1a; padding:12px; border-radius:6px; overflow-x:auto; line-height:1.4; border:1px solid var(--border-color);">
++-----------------------------------------------------------------------------------+
+|                                  MAIN POWER SUPPLY                                |
+|  12V 3A DC Power Adapter  +  5V 3A UBEC Step-Down Buck Converter                  |
+|  +12V DC (L298 Motor VCC Rail)  +5V DC @ 3A (Raspberry Pi 4/5 Power)              |
++------------------------------------------+----------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------+
+|                              RASPBERRY PI 4 / 5 MCU                               |
+| - 40-Pin GPIO Header                                                              |
+| - USB Audio Out / Speaker System (AI Vocal Speech & Singing Playback)             |
+| - L298 Motor Controller GPIO Pin Connections                                      |
+| - USB / CSI Camera Module (AI Computer Vision Lens on Nose/Eyes)                  |
++------------------------------------------+----------------------------------------+
+              |                                        |
+              v (Mouth GPIO 17, 27, 22)                v (Bow GPIO 4, 14, 15)
++------------------------------------------+----------------------------------------+
+|                        L298 DUAL H-BRIDGE MOTOR DRIVER                            |
+| +12V Motor VCC  |  Common GND Bus  |  +5V Logic Reference                         |
++------------------------------------------+----------------------------------------+
+              |                                        |
+              v (Channel 1 OUT1/OUT2)                  v (Channel 2 OUT3/OUT4)
++------------------------------------+   +------------------------------------------+
+|      CHANNEL 1: MOUTH MOTOR        |   |         CHANNEL 2: BOW MOTOR             |
+| - Opens lower jaw when energized   |   | - Bows deerhead forward when energized   |
+| - Closes lower jaw when inactive   |   | - Returns upright when inactive          |
+| - Real-time sync with AI Speech    |   | - Rhythmic beat bowing during songs      |
++------------------------------------+   +------------------------------------------+
+                </pre>
+            </div>
+
+            <!-- Raspberry Pi 40-Pin GPIO Mappings Table -->
+            <div class="leg-card" style="margin-bottom:16px;">
+                <div class="leg-title" style="color:var(--accent-purple); margin-bottom:10px;">📌 RASPBERRY PI 40-PIN GPIO CONNECTIONS</div>
+                <table style="width:100%; border-collapse:collapse; font-size:0.78rem; text-align:left;">
+                    <thead>
+                        <tr style="background:rgba(255,255,255,0.05); color:var(--accent-cyan); border-bottom:1px solid var(--border-color);">
+                            <th style="padding:8px;">Pin #</th>
+                            <th style="padding:8px;">BCM GPIO</th>
+                            <th style="padding:8px;">Signal Description</th>
+                            <th style="padding:8px;">Target Connection</th>
+                            <th style="padding:8px;">Function & Operation</th>
+                        </tr>
+                    </thead>
+                    <tbody style="color:var(--text-primary);">
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-orange);">Pin 2</td>
+                            <td style="padding:8px;">5.0V Power</td>
+                            <td style="padding:8px;">5V Logic VCC</td>
+                            <td style="padding:8px;">L298 5V Logic In</td>
+                            <td style="padding:8px;">5.0V Logic Reference Rail</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--text-muted);">Pin 6</td>
+                            <td style="padding:8px;">Ground</td>
+                            <td style="padding:8px;">Common GND Bus</td>
+                            <td style="padding:8px;">L298 Common GND</td>
+                            <td style="padding:8px;">Shared Reference Ground Rail</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-cyan);">Pin 11</td>
+                            <td style="padding:8px;">GPIO 17</td>
+                            <td style="padding:8px;">PWM Speed Control</td>
+                            <td style="padding:8px;">L298 ENA (Ch 1)</td>
+                            <td style="padding:8px;"><b>Mouth Lower Jaw Speed / PWM</b></td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-cyan);">Pin 13</td>
+                            <td style="padding:8px;">GPIO 27</td>
+                            <td style="padding:8px;">Digital Direction 1</td>
+                            <td style="padding:8px;">L298 IN1 (Ch 1)</td>
+                            <td style="padding:8px;">Mouth Open Direction Signal 1</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-cyan);">Pin 15</td>
+                            <td style="padding:8px;">GPIO 22</td>
+                            <td style="padding:8px;">Digital Direction 2</td>
+                            <td style="padding:8px;">L298 IN2 (Ch 1)</td>
+                            <td style="padding:8px;">Mouth Open Direction Signal 2</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-orange);">Pin 7</td>
+                            <td style="padding:8px;">GPIO 4</td>
+                            <td style="padding:8px;">PWM Speed Control</td>
+                            <td style="padding:8px;">L298 ENB (Ch 2)</td>
+                            <td style="padding:8px;"><b>Head Bowing Speed / PWM</b></td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-orange);">Pin 8</td>
+                            <td style="padding:8px;">GPIO 14</td>
+                            <td style="padding:8px;">Digital Direction 1</td>
+                            <td style="padding:8px;">L298 IN3 (Ch 2)</td>
+                            <td style="padding:8px;">Bow Forward Direction Signal 1</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.03);">
+                            <td style="padding:8px; font-weight:bold; color:var(--accent-orange);">Pin 10</td>
+                            <td style="padding:8px;">GPIO 15</td>
+                            <td style="padding:8px;">Digital Direction 2</td>
+                            <td style="padding:8px;">L298 IN4 (Ch 2)</td>
+                            <td style="padding:8px;">Bow Forward Direction Signal 2</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- L298 Motor Driver Truth Table Card -->
+            <div class="leg-card">
+                <div class="leg-title" style="color:var(--accent-green); margin-bottom:10px;">⚙️ L298 MOTOR DRIVER LOGIC TRUTH TABLE</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6;">
+                    <b>• Mouth Open (Channel 1 Active):</b> ENA = HIGH (100% PWM), IN1 = HIGH, IN2 = LOW &rarr; Lower jaw opens.<br>
+                    <b>• Mouth Closed (Channel 1 Inactive):</b> ENA = LOW, IN1 = LOW, IN2 = LOW &rarr; Jaw spring pulls mouth closed.<br>
+                    <b>• Head Bow Forward (Channel 2 Active):</b> ENB = HIGH (90% PWM), IN3 = HIGH, IN4 = LOW &rarr; Deerhead bows forward.<br>
+                    <b>• Head Return Upright (Channel 2 Inactive):</b> ENB = LOW, IN3 = LOW, IN4 = LOW &rarr; Neck returns upright to vertical wall position.
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- VIEW 4: INSTRUCTIONS & MANUAL -->
     <div class="view-screen" id="viewInstructions">
-        <div class="panel center" style="max-width:800px; margin:20px auto;">
-            <div class="section-title">📖 Animatronic Deerhead Operating Manual</div>
-            <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.6; margin-top:10px;">
-                1. <b>Wall Mounting:</b> Secure the wooden shield plaque to a vertical wall stud or anchor.<br>
-                2. <b>Powering On:</b> Connect the +12V DC power supply to the L298 motor driver and +5V UBEC to the Raspberry Pi.<br>
-                3. <b>AI Conversation:</b> Click 'Start Mic VAD' in the Gemini Voice AI tab to speak hands-free. The deerhead mouth will open and close in real-time sync with AI speech.<br>
-                4. <b>Song Performances:</b> Import MP3 song files into the Music tab to watch the deerhead sing and bow on beat drops!
+        <div class="panel center" style="max-width:900px; margin:20px auto;">
+            <div class="section-title">📖 Wall-Mounted Animatronic Deerhead Operating Manual & Assembly Guide</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">
+                Complete step-by-step instructions for hardware assembly, wall mounting, power wiring, AI setup, and song performance features.
+            </div>
+
+            <!-- Step 1: Wall Mounting -->
+            <div class="leg-card" style="margin-bottom:14px;">
+                <div class="leg-title" style="color:var(--accent-cyan);">1. 🏰 MECHANICAL WALL MOUNTING & TROPHY SHIELD SETUP</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
+                    1. <b>Mounting Location:</b> Choose a vertical wall surface with a wall stud or heavy-duty wall anchor capable of supporting 5-8 lbs.<br>
+                    2. <b>Shield Plaque:</b> Secure the dark oak wooden trophy shield plaque vertically against the wall.<br>
+                    3. <b>Neck Bowing Joint:</b> Ensure the neck bowing pivot hinge is aligned horizontally so the head bows straight forward.<br>
+                    4. <b>Mouth Jaw Clearance:</b> Check that the lower jaw moves freely up and down without rubbing against the snout coat.
+                </div>
+            </div>
+
+            <!-- Step 2: Electrical Wiring -->
+            <div class="leg-card" style="margin-bottom:14px;">
+                <div class="leg-title" style="color:var(--accent-orange);">2. ⚡ ELECTRICAL WIRING & POWER DISTRIBUTION</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
+                    1. <b>12V Power Input:</b> Connect the +12V DC power adapter to the L298 Motor Driver `VCC` (+) and `GND` (-) screw terminals.<br>
+                    2. <b>5V UBEC Converter:</b> Connect the 5V 3A UBEC step-down regulator from the 12V rail to the Raspberry Pi 5V power input.<br>
+                    3. <b>Common Ground (GND):</b> <u>CRITICAL SAFETY:</u> Connect Raspberry Pi GND (Pin 6) to L298 GND and Power Supply (-) GND to establish a shared ground reference.<br>
+                    4. <b>Motor Pins:</b> Connect L298 OUT1/OUT2 to the Lower Jaw Mouth Motor (Channel 1), and OUT3/OUT4 to the Neck Bowing Pivot Motor (Channel 2).
+                </div>
+            </div>
+
+            <!-- Step 3: Audio & Vision -->
+            <div class="leg-card" style="margin-bottom:14px;">
+                <div class="leg-title" style="color:var(--accent-purple);">3. 🎤 AUDIO SPEAKER & CAMERA VISION SETUP</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
+                    1. <b>Audio Speaker:</b> Connect a USB speaker or 3.5mm AUX powered amplifier to the Raspberry Pi audio output for clear voice and song playback.<br>
+                    2. <b>Camera Lens:</b> Position a USB webcam or Pi CSI camera in the snout nose/eye lens area pointing forward towards the room.
+                </div>
+            </div>
+
+            <!-- Step 4: Software & AI Operations -->
+            <div class="leg-card" style="margin-bottom:14px;">
+                <div class="leg-title" style="color:var(--accent-green);">4. 🤖 SOFTWARE OPERATION & GEMINI AI FEATURES</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
+                    1. <b>Starting Server:</b> Open a terminal and run `python3 server.py --port 1490`. Access the Web UI at <code>http://localhost:1490</code>.<br>
+                    2. <b>Gemini API Key:</b> Set your key in the <b>⚙️ Settings Tab</b> or side panel input.<br>
+                    3. <b>Hands-Free AI Voice Chat:</b> Click <b>🎙️ Start Mic VAD</b> in the Gemini tab to speak hands-free. The lower jaw will open/close in real-time sync with AI vocal responses while bowing on greetings.<br>
+                    4. <b>MP3 Song Singing & URL Downloads:</b> In the <b>🎵 Music & Singing Tab</b>, drop local MP3 files or paste a direct MP3 URL to download tracks directly into the playlist. Click <b>🎤 Play & Sing</b> to watch the deerhead lipsync to vocals and bow to beat drops!
+                </div>
+            </div>
+
+            <!-- Step 5: Troubleshooting & Safety -->
+            <div class="leg-card">
+                <div class="leg-title" style="color:var(--accent-red);">5. ⚠️ TROUBLESHOOTING & SAFETY RULES</div>
+                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
+                    • <b>Mouth Doesn't Move:</b> Verify L298 Channel 1 jumper ENA is removed or connected to Pi GPIO 17 (Pin 11). Check 12V power supply connection.<br>
+                    • <b>No Audio Sync:</b> Ensure your browser has permitted microphone and Web Audio API permissions.<br>
+                    • <b>Exporting Code:</b> Click <b>Export Python Code</b> in the header to download standalone Raspberry Pi hardware control scripts (<code>deerhead_animatronic_control.py</code>).
+                </div>
             </div>
         </div>
     </div>
