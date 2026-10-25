@@ -205,10 +205,20 @@
                 </div>
 
                 <!-- MP3 File Upload Dropzone -->
-                <div id="dropZone" style="border:2px dashed var(--border-color); border-radius:6px; padding:12px; text-align:center; background:rgba(255,255,255,0.02); cursor:pointer; margin-bottom:10px;">
+                <div id="dropZone" style="border:2px dashed var(--border-color); border-radius:6px; padding:10px; text-align:center; background:rgba(255,255,255,0.02); cursor:pointer; margin-bottom:10px;">
                     <div style="font-size:0.78rem; color:var(--text-primary); font-weight:bold;">📁 Drop MP3 Song Files Here</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted);">or click to browse local files</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">or click to upload from your computer</div>
                     <input type="file" id="mp3FileInput" accept=".mp3,.wav,.ogg,.m4a" multiple style="display:none;">
+                </div>
+
+                <!-- Download MP3 from Web URL -->
+                <div style="background:var(--input-bg); border:1px solid var(--border-color); border-radius:6px; padding:8px; margin-bottom:10px;">
+                    <div style="font-size:0.75rem; font-weight:bold; color:var(--accent-cyan); margin-bottom:6px;">🌐 Download MP3 Song from Web URL</div>
+                    <div style="display:flex; gap:4px;">
+                        <input type="url" id="inputMp3Url" placeholder="https://example.com/song.mp3" style="flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.75rem;">
+                        <button class="btn-preset primary" id="btnDownloadMp3Url" style="padding:6px 10px; font-size:0.75rem;">⬇️ Download</button>
+                    </div>
+                    <div id="statusDownloadMp3Url" style="font-size:0.7rem; color:var(--text-muted); margin-top:4px; display:none;"></div>
                 </div>
 
                 <!-- Song Playlist List -->
@@ -225,6 +235,21 @@
             <div class="section-title">⚙️ Wall-Mounted Animatronic Deerhead Hardware Settings</div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">
                 Calibrate L298 channel assignments, mouth movement parameters, and auto-bowing triggers.
+            </div>
+
+            <div class="leg-card" style="margin-bottom:12px;">
+                <div class="leg-title" style="color:var(--accent-purple); display:flex; justify-content:space-between; align-items:center;">
+                    <span>🤖 GOOGLE GEMINI AI API KEY CONFIGURATION</span>
+                    <span id="statusApiKeySettings" style="font-size:0.75rem; color:var(--accent-green);">✅ Default Key Active</span>
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:6px; margin-bottom:10px;">
+                    Configures the Google Gemini AI key used for multimodal vision, voice conversation, and animatronic function calls.
+                </div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <input type="password" id="inputApiKeySettings" placeholder="Enter Gemini API Key..." style="flex:1; background:var(--input-bg); color:#fff; border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; font-size:0.8rem;">
+                    <button class="btn-preset primary" id="btnSaveApiKeySettings" style="padding:8px 16px;">Save Key</button>
+                    <button class="btn-preset" id="btnResetApiKeySettings" style="padding:8px 12px; background:var(--input-bg);">Reset Default</button>
+                </div>
             </div>
 
             <div class="leg-card" style="margin-bottom:12px;">

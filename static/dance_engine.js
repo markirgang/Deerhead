@@ -71,6 +71,54 @@ class DeerheadPerformanceEngine {
             });
         }
 
+        // URL Download Handler
+        const btnDownloadUrl = document.getElementById('btnDownloadMp3Url');
+        const inputUrl = document.getElementById('inputMp3Url');
+        const statusUrl = document.getElementById('statusDownloadMp3Url');
+
+        if (btnDownloadUrl && inputUrl) {
+            btnDownloadUrl.addEventListener('click', () => {
+                const urlVal = inputUrl.value.trim();
+                if (!urlVal) return;
+
+                if (statusUrl) {
+                    statusUrl.style.display = 'block';
+                    statusUrl.style.color = 'var(--accent-cyan)';
+                    statusUrl.textContent = '⏳ Downloading MP3 from URL...';
+                }
+
+                fetch('/api/audio/download_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlVal })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        inputUrl.value = '';
+                        if (statusUrl) {
+                            statusUrl.style.color = 'var(--accent-green)';
+                            statusUrl.textContent = `✅ Downloaded ${data.filename} (${(data.size / (1024*1024)).toFixed(2)} MB)`;
+                        }
+                        this.loadPlaylist(() => {
+                            this.selectAndPlayTrack(data.filename);
+                        });
+                    } else {
+                        if (statusUrl) {
+                            statusUrl.style.color = 'var(--accent-red)';
+                            statusUrl.textContent = `❌ ${data.error || 'Download failed'}`;
+                        }
+                    }
+                })
+                .catch(err => {
+                    if (statusUrl) {
+                        statusUrl.style.color = 'var(--accent-red)';
+                        statusUrl.textContent = `❌ Error: ${err.message}`;
+                    }
+                });
+            });
+        }
+
         const selectMp3Track = document.getElementById('selectMp3Track');
         if (selectMp3Track) {
             selectMp3Track.addEventListener('change', (e) => {
@@ -260,9 +308,10 @@ class DeerheadPerformanceEngine {
                                 <div class="track-name">${file.name}</div>
                                 <div class="track-meta">${sizeMb} MB</div>
                             </div>
-                            <div class="track-actions">
-                                <button class="btn-preset primary btn-play-track" style="padding: 4px 8px; font-size: 0.75rem;">🎤 Play & Sing</button>
-                                <button class="btn-preset btn-delete-track" style="background: var(--accent-red); color: #fff; padding: 4px 8px; font-size: 0.75rem;">🗑️</button>
+                            <div class="track-actions" style="display:flex; gap:4px;">
+                                <button class="btn-preset primary btn-play-track" style="padding: 4px 8px; font-size: 0.75rem;" title="Play track and sync mouth/bowing">🎤 Play & Sing</button>
+                                <a href="/audio/${encodeURIComponent(file.name)}" download="${file.name}" class="btn-preset" style="padding: 4px 8px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center;" title="Download MP3 file to your device">⬇️</a>
+                                <button class="btn-preset btn-delete-track" style="background: var(--accent-red); color: #fff; padding: 4px 8px; font-size: 0.75rem;" title="Delete MP3 track">🗑️</button>
                             </div>
                         `;
 

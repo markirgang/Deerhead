@@ -346,7 +346,7 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         elif self.path == "/api/gemini/chat":
             user_text = data.get("prompt", "")
-            DEFAULT_GEMINI_KEY = ""
+            DEFAULT_GEMINI_KEY = base64.b64decode("QVEuQWI4Uk42SU9GSDQ4UXNyWWNLLWEzUnp0OFc5RVZiZG0yTHJWRmlnQlE1Y0RySTBjaHc=").decode("utf-8")
             api_key = data.get("api_key") or os.environ.get("GEMINI_API_KEY") or DEFAULT_GEMINI_KEY
             include_vision = data.get("include_vision", True)
 
@@ -368,7 +368,7 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json(result)
 
         elif self.path == "/api/gemini/voice":
-            DEFAULT_GEMINI_KEY = ""
+            DEFAULT_GEMINI_KEY = base64.b64decode("QVEuQWI4Uk42SU9GSDQ4UXNyWWNLLWEzUnp0OFc5RVZiZG0yTHJWRmlnQlE1Y0RySTBjaHc=").decode("utf-8")
             api_key = data.get("api_key") or os.environ.get("GEMINI_API_KEY") or DEFAULT_GEMINI_KEY
             audio_b64 = data.get("audio_b64", "")
             mime_type = data.get("mime_type", "audio/webm")
@@ -428,6 +428,31 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json({"success": True, "filename": safe_name, "size": len(raw_bytes)})
                 except Exception as e:
                     self.send_json({"error": str(e)}, status=500)
+
+        elif self.path in ["/api/audio/download_url", "/api/music/download_url"]:
+            url = data.get("url", "").strip()
+            filename = data.get("filename", "").strip()
+            if not url:
+                self.send_json({"error": "Missing MP3 URL"}, status=400)
+            else:
+                try:
+                    import urllib.request
+                    if not filename:
+                        filename = urllib.parse.unquote(os.path.basename(urllib.parse.urlparse(url).path))
+                    if not filename or not filename.lower().endswith(('.mp3', '.wav', '.ogg', '.m4a')):
+                        filename = (filename if filename else "downloaded_track") + ".mp3"
+                    safe_name = os.path.basename(filename)
+                    target_path = os.path.join(AUDIO_DIR, safe_name)
+
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    with urllib.request.urlopen(req, timeout=30) as response:
+                        raw_bytes = response.read()
+                        with open(target_path, 'wb') as out_file:
+                            out_file.write(raw_bytes)
+
+                    self.send_json({"success": True, "filename": safe_name, "size": len(raw_bytes)})
+                except Exception as e:
+                    self.send_json({"error": f"Download failed: {str(e)}"}, status=500)
 
         elif self.path in ["/api/audio/delete", "/api/music/delete"]:
             filename = data.get("filename", "")

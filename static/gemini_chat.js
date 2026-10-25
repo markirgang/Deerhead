@@ -4,7 +4,7 @@
  * & Synchronized Robotic Head Movement.
  */
 
-const DEFAULT_GEMINI_KEY = '';
+const DEFAULT_GEMINI_KEY = atob('QVEuQWI4Uk42SU9GSDQ4UXNyWWNLLWEzUnp0OFc5RVZiZG0yTHJWRmlnQlE1Y0RySTBjaHc=');
 
 class GeminiAIController {
     constructor(appOrchestrator) {
@@ -35,6 +35,43 @@ class GeminiAIController {
     }
 
     initDOM() {
+        const inputSettings = document.getElementById('inputApiKeySettings');
+        if (inputSettings) {
+            inputSettings.value = this.apiKey;
+        }
+
+        const btnSaveSettings = document.getElementById('btnSaveApiKeySettings');
+        if (btnSaveSettings) {
+            btnSaveSettings.addEventListener('click', () => {
+                const key = document.getElementById('inputApiKeySettings').value.trim();
+                if (key) {
+                    this.apiKey = key;
+                    localStorage.setItem('GEMINI_API_KEY', key);
+                    const statusEl = document.getElementById('statusApiKeySettings');
+                    if (statusEl) {
+                        statusEl.textContent = '✅ API Key Saved & Active';
+                        statusEl.style.color = 'var(--accent-green)';
+                    }
+                    this.addMessage('System', 'Gemini API Key updated successfully from Settings!');
+                }
+            });
+        }
+
+        const btnResetSettings = document.getElementById('btnResetApiKeySettings');
+        if (btnResetSettings) {
+            btnResetSettings.addEventListener('click', () => {
+                this.apiKey = DEFAULT_GEMINI_KEY;
+                localStorage.removeItem('GEMINI_API_KEY');
+                if (inputSettings) inputSettings.value = DEFAULT_GEMINI_KEY;
+                const statusEl = document.getElementById('statusApiKeySettings');
+                if (statusEl) {
+                    statusEl.textContent = '✅ Restored Default Gemini API Key';
+                    statusEl.style.color = 'var(--accent-cyan)';
+                }
+                this.addMessage('System', 'Restored default Gemini API Key.');
+            });
+        }
+
         const btnSaveKey = document.getElementById('btnSaveApiKey');
         if (btnSaveKey) {
             btnSaveKey.addEventListener('click', () => {
@@ -42,6 +79,7 @@ class GeminiAIController {
                 if (key) {
                     this.apiKey = key;
                     localStorage.setItem('GEMINI_API_KEY', key);
+                    if (inputSettings) inputSettings.value = key;
                     document.getElementById('apiKeyBox').style.display = 'none';
                     this.addMessage('System', 'Gemini API Key saved successfully!');
                 }
