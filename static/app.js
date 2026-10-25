@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRightPanelTabs();
     setupDeerheadMotorControls(appAPI);
     setupPresetButtons(appAPI, performanceEngine);
+    setupHardwareSettings();
 
     // Camera Source Switching
     const selectCamera = document.getElementById('selectCamera');
@@ -325,6 +326,77 @@ function setupPresetButtons(appAPI, performanceEngine) {
         btnSentinel.addEventListener('click', () => {
             appAPI.setMouthEnergized(false);
             appAPI.setBowEnergized(false);
+        });
+    }
+}
+
+function setupHardwareSettings() {
+    const selectCam = document.getElementById('selectCameraSettings');
+    const selectMic = document.getElementById('selectMicSettings');
+    const selectSpk = document.getElementById('selectSpeakerSettings');
+    const slideMicGain = document.getElementById('slideMicGainSettings');
+    const slideSpkVol = document.getElementById('slideSpeakerVolSettings');
+    const statusEl = document.getElementById('statusHardwareSettings');
+
+    // Load active hardware config from server
+    fetch('/api/hardware/config')
+        .then(res => res.json())
+        .then(data => {
+            if (selectCam && data.camera_source) selectCam.value = data.camera_source;
+            if (selectMic && data.mic_source) selectMic.value = data.mic_source;
+            if (selectSpk && data.speaker_source) selectSpk.value = data.speaker_source;
+            if (slideMicGain && data.mic_gain !== undefined) {
+                slideMicGain.value = data.mic_gain;
+                const valEl = document.getElementById('valMicGainSettings');
+                if (valEl) valEl.textContent = `${data.mic_gain}%`;
+            }
+            if (slideSpkVol && data.speaker_volume !== undefined) {
+                slideSpkVol.value = data.speaker_volume;
+                const valEl = document.getElementById('valSpeakerVolSettings');
+                if (valEl) valEl.textContent = `${data.speaker_volume}%`;
+            }
+        })
+        .catch(err => {});
+
+    // Save Handlers
+    const saveHW = (payload, label) => {
+        fetch('/api/hardware/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (statusEl) {
+                statusEl.textContent = `✅ Saved ${label}`;
+                statusEl.style.color = 'var(--accent-green)';
+            }
+            const camFeed = document.getElementById('camFeed');
+            if (camFeed) camFeed.src = `/api/camera/frame?t=${Date.now()}`;
+        })
+        .catch(err => {});
+    };
+
+    const btnSaveCam = document.getElementById('btnSaveCameraSettings');
+    if (btnSaveCam && selectCam) btnSaveCam.addEventListener('click', () => saveHW({ camera_source: selectCam.value }, 'Camera Device'));
+
+    const btnSaveMic = document.getElementById('btnSaveMicSettings');
+    if (btnSaveMic && selectMic && slideMicGain) btnSaveMic.addEventListener('click', () => saveHW({ mic_source: selectMic.value, mic_gain: parseInt(slideMicGain.value) }, 'Microphone Settings'));
+
+    const btnSaveSpk = document.getElementById('btnSaveSpeakerSettings');
+    if (btnSaveSpk && selectSpk && slideSpkVol) btnSaveSpk.addEventListener('click', () => saveHW({ speaker_source: selectSpk.value, speaker_volume: parseInt(slideSpkVol.value) }, 'Speaker Settings'));
+
+    if (slideMicGain) {
+        slideMicGain.addEventListener('input', (e) => {
+            const valEl = document.getElementById('valMicGainSettings');
+            if (valEl) valEl.textContent = `${e.target.value}%`;
+        });
+    }
+
+    if (slideSpkVol) {
+        slideSpkVol.addEventListener('input', (e) => {
+            const valEl = document.getElementById('valSpeakerVolSettings');
+            if (valEl) valEl.textContent = `${e.target.value}%`;
         });
     }
 }

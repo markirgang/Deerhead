@@ -1,0 +1,7 @@
+{
+    "camera_source": "usb",
+    "mic_source": "default",
+    "mic_gain": 100,
+    "speaker_source": "default",
+    "speaker_volume": 90
+}

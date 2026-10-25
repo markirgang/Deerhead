@@ -256,10 +256,61 @@
             </div>
 
             <div class="leg-card" style="margin-bottom:12px;">
-                <div class="leg-title" style="color:var(--accent-cyan);">L298 MOTOR DRIVER PIN ASSIGNMENTS</div>
-                <div style="font-size:0.78rem; color:var(--text-primary); line-height:1.6; margin-top:8px;">
-                    <b>• Channel 1 (Lower Jaw Mouth):</b> ENA = GPIO 17 (Pin 11), IN1 = GPIO 27 (Pin 13), IN2 = GPIO 22 (Pin 15)<br>
-                    <b>• Channel 2 (Head Bowing Pivot):</b> ENB = GPIO 4 (Pin 7), IN3 = GPIO 14 (Pin 8), IN4 = GPIO 15 (Pin 10)
+                <div class="leg-title" style="color:var(--accent-cyan); display:flex; justify-content:space-between; align-items:center;">
+                    <span>📹 🎙️ 🔊 CAMERA, MICROPHONE & SPEAKER HARDWARE SELECTION</span>
+                    <span id="statusHardwareSettings" style="font-size:0.75rem; color:var(--accent-green);">✅ Hardware Configured</span>
+                </div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:6px; margin-bottom:12px;">
+                    Select active video camera lens, microphone audio input source, and speaker output target for AI conversation & song performances.
+                </div>
+
+                <!-- Camera Selection Field -->
+                <div style="margin-bottom:12px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-cyan); margin-bottom:6px;">📹 Camera Hardware Device</div>
+                    <div style="display:flex; gap:6px;">
+                        <select id="selectCameraSettings" style="flex:1; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
+                            <option value="usb">USB Camera 0 (/dev/video0 - Wide Angle Lens)</option>
+                            <option value="usb1">USB Camera 1 (/dev/video1)</option>
+                            <option value="csi">Raspberry Pi CSI Camera (Picamera2 Module)</option>
+                            <option value="synthetic">Virtual Camera Test Feed</option>
+                        </select>
+                        <button class="btn-preset primary" id="btnSaveCameraSettings" style="padding:6px 12px; font-size:0.75rem;">Save Camera</button>
+                    </div>
+                </div>
+
+                <!-- Microphone Selection Field -->
+                <div style="margin-bottom:12px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-green); margin-bottom:6px;">🎙️ Microphone Audio Input Device & Gain</div>
+                    <div style="display:flex; gap:6px; margin-bottom:6px;">
+                        <select id="selectMicSettings" style="flex:1; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
+                            <option value="default">Default System Microphone</option>
+                            <option value="usb_mic">USB Microphone / Sound Card</option>
+                            <option value="internal_array">Internal Microphone Array</option>
+                        </select>
+                        <button class="btn-preset primary" id="btnSaveMicSettings" style="padding:6px 12px; font-size:0.75rem;">Save Mic</button>
+                    </div>
+                    <div class="slider-control" style="margin-top:6px;">
+                        <div class="slider-label"><span>Mic VAD Sensitivity Gain</span><span class="slider-val" id="valMicGainSettings">100%</span></div>
+                        <input type="range" id="slideMicGainSettings" min="10" max="200" value="100" style="width:100%;">
+                    </div>
+                </div>
+
+                <!-- Speaker Selection Field -->
+                <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-orange); margin-bottom:6px;">🔊 Speaker / Audio Output Target</div>
+                    <div style="display:flex; gap:6px; margin-bottom:6px;">
+                        <select id="selectSpeakerSettings" style="flex:1; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
+                            <option value="default">Default System Audio Output</option>
+                            <option value="usb_speaker">USB Audio Speaker / Sound Card</option>
+                            <option value="aux_35mm">3.5mm AUX Audio Jack (Headphone Out)</option>
+                            <option value="hdmi">HDMI Audio Output</option>
+                        </select>
+                        <button class="btn-preset primary" id="btnSaveSpeakerSettings" style="padding:6px 12px; font-size:0.75rem;">Save Speaker</button>
+                    </div>
+                    <div class="slider-control" style="margin-top:6px;">
+                        <div class="slider-label"><span>Master Speaker Volume</span><span class="slider-val" id="valSpeakerVolSettings">100%</span></div>
+                        <input type="range" id="slideSpeakerVolSettings" min="0" max="100" value="100" style="width:100%;">
+                    </div>
                 </div>
             </div>
         </div>

@@ -159,6 +159,35 @@ class CameraStream:
 camera_stream = CameraStream("usb")
 gemini_bridge = GeminiHexapodBridge()
 
+# Hardware Device Configuration (Camera, Microphone, Speaker)
+HARDWARE_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hardware_config.json")
+
+hardware_config = {
+    "camera_source": "usb",
+    "mic_source": "default",
+    "mic_gain": 100,
+    "speaker_source": "default",
+    "speaker_volume": 100
+}
+
+def load_hardware_config():
+    if os.path.exists(HARDWARE_CONFIG_FILE):
+        try:
+            with open(HARDWARE_CONFIG_FILE, "r") as f:
+                saved = json.load(f)
+                hardware_config.update(saved)
+        except Exception:
+            pass
+
+def save_hardware_config():
+    try:
+        with open(HARDWARE_CONFIG_FILE, "w") as f:
+            json.dump(hardware_config, f, indent=4)
+    except Exception:
+        pass
+
+load_hardware_config()
+
 # Wall-Mounted Animatronic Deerhead State
 # L298 Motor Controller Channel 1: Mouth Motor (Energized = Jaw Open/Moving)
 # L298 Motor Controller Channel 2: Bowing Motor (Energized = Deerhead Bows Forward)
@@ -302,6 +331,8 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json(deerhead_state)
         elif self.path.startswith("/api/deerhead/lights") or self.path.startswith("/api/lights"):
             self.send_json(dome_lights)
+        elif self.path.startswith("/api/hardware/config"):
+            self.send_json(hardware_config)
         elif self.path.startswith("/api/audio/list") or self.path.startswith("/api/music/list"):
             files = []
             if os.path.exists(AUDIO_DIR):
@@ -403,6 +434,22 @@ class DeerheadRequestHandler(http.server.SimpleHTTPRequestHandler):
                     except ValueError:
                         pass
             self.send_json({"success": True, "lights": dome_lights})
+
+        elif self.path in ["/api/hardware/config", "/api/hardware/select"]:
+            if "camera_source" in data:
+                hardware_config["camera_source"] = str(data["camera_source"]).lower()
+                camera_stream.set_source(hardware_config["camera_source"])
+            if "mic_source" in data:
+                hardware_config["mic_source"] = str(data["mic_source"])
+            if "mic_gain" in data:
+                hardware_config["mic_gain"] = int(data["mic_gain"])
+            if "speaker_source" in data:
+                hardware_config["speaker_source"] = str(data["speaker_source"])
+            if "speaker_volume" in data:
+                hardware_config["speaker_volume"] = int(data["speaker_volume"])
+
+            save_hardware_config()
+            self.send_json({"success": True, "config": hardware_config})
 
         elif self.path in ["/api/deerhead/bow", "/api/bow"]:
             duration = float(data.get("duration", 1.8))
