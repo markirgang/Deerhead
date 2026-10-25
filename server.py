@@ -17,7 +17,7 @@ import re
 from gemini_bridge import GeminiHexapodBridge
 import numpy as np
 
-PORT = int(os.environ.get("PORT", 1490))
+PORT = int(os.environ.get("PORT", 1590))
 HOST = os.environ.get("HOST", os.environ.get("IP", "127.0.0.1"))
 DIRECTORY = os.environ.get("DIRECTORY", os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
 AUDIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audio")
