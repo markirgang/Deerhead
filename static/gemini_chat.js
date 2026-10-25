@@ -209,7 +209,7 @@ class GeminiAIController {
 
             const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
             const vuBar = document.getElementById('micVuBar');
-            const vuVal = document.getElementById('vuVal');
+            const vuVal = document.getElementById('micVuLevelVal') || document.getElementById('vuVal');
 
             const updateVU = () => {
                 if (!this.analyser) return;

@@ -102,19 +102,19 @@
             <div id="viewport3d" style="width:100%; height:360px; background:#0a0d14; border-radius:8px; overflow:hidden; position:relative;"></div>
 
             <!-- Live Camera Feed Section -->
-            <div style="margin-top:12px; background:var(--panel-card); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div style="font-size:0.85rem; font-weight:bold; color:var(--accent-cyan);">📹 Wall Deerhead AI Camera Stream</div>
+            <div style="margin-top:12px; background:var(--panel-card); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="font-size:0.9rem; font-weight:bold; color:var(--accent-cyan);">📹 Wall Deerhead AI Camera Stream</div>
                     <div style="display:flex; gap:6px; align-items:center;">
                         <select id="selectCamera" style="background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:4px 8px; border-radius:4px; font-size:0.75rem;">
                             <option value="usb">USB Camera (Wide Angle)</option>
                             <option value="csi">Raspberry Pi CSI Camera</option>
                         </select>
-                        <button class="btn-preset primary" id="btnSwitchCamera" style="padding:4px 8px; font-size:0.75rem;">Switch</button>
+                        <button class="btn-preset primary" id="btnSwitchCamera" style="padding:4px 10px; font-size:0.75rem;">Switch Source</button>
                     </div>
                 </div>
-                <div style="text-align:center;">
-                    <img id="camFeed" src="/api/camera/frame" alt="Camera Feed" style="max-width:100%; height:200px; border-radius:6px; border:1px solid var(--border-color); object-fit:contain; background:#000;">
+                <div style="text-align:center; background:#000; border-radius:8px; padding:4px; border:1px solid var(--border-color);">
+                    <img id="camFeed" src="/api/camera/frame" alt="Camera Feed" style="width:100%; height:320px; border-radius:6px; object-fit:contain; background:#000; display:block;">
                 </div>
             </div>
         </main>
@@ -135,9 +135,20 @@
                 </div>
 
                 <!-- Mic & Voice Status Bar -->
-                <div style="display:flex; gap:6px; margin-bottom:10px;">
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
                     <button class="btn-preset primary" id="btnMic" style="flex:1; background:linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));">🎙️ Start Mic VAD</button>
                     <button class="btn-preset" id="btnAskVision" style="padding:6px;">👁️ Ask Camera</button>
+                </div>
+
+                <!-- Mic VU Meter Bar -->
+                <div id="micVuMeterContainer" style="margin-bottom:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+                        <span>🎙️ Mic VU Volume Meter</span>
+                        <span id="micVuLevelVal" style="color:var(--accent-cyan); font-weight:bold;">0%</span>
+                    </div>
+                    <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden;">
+                        <div id="micVuBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--accent-cyan), var(--accent-green), var(--accent-orange)); transition:width 0.05s ease; border-radius:5px;"></div>
+                    </div>
                 </div>
 
                 <!-- Chat History Window -->
