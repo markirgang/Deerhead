@@ -6,6 +6,7 @@ import os
 import sys
 import socket
 import ssl
+os.environ["OPENCV_LOG_LEVEL"] = "OFF"
 import cv2
 import base64
 import threading
