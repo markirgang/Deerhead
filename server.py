@@ -16,7 +16,7 @@ import re
 from gemini_bridge import GeminiHexapodBridge
 import numpy as np
 
-PORT = int(os.environ.get("PORT", 9090))
+PORT = int(os.environ.get("PORT", 14090))
 HOST = os.environ.get("HOST", os.environ.get("IP", "127.0.0.1"))
 DIRECTORY = os.environ.get("DIRECTORY", os.path.join(os.path.dirname(os.path.abspath(__file__)), "static"))
 AUDIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "audio")
@@ -107,10 +107,10 @@ class CameraStream:
             else:
                 if self.cap is None or not self.cap.isOpened():
                     self._close_cameras()
-                    candidates = [8, 23, 0, 1, 6, 2]
+                    candidates = [0, 1, 2, 6, 8, 23]
                     if cur_source.isdigit():
                         candidates.insert(0, int(cur_source))
-                    candidates = list(dict.fromkeys(candidates))
+                    candidates = [idx for idx in dict.fromkeys(candidates) if os.path.exists(f"/dev/video{idx}")]
 
                     opened = False
                     for idx in candidates:
@@ -130,7 +130,7 @@ class CameraStream:
                             pass
 
                     if not opened:
-                        time.sleep(4.0)
+                        time.sleep(10.0)
 
                 if self.cap and self.cap.isOpened():
                     try:
