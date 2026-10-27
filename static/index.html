@@ -283,9 +283,10 @@
                     <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-green); margin-bottom:6px;">🎙️ Microphone Audio Input Device & Gain</div>
                     <div style="display:flex; gap:6px; margin-bottom:6px;">
                         <select id="selectMicSettings" style="flex:1; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
-                            <option value="default">Default System Microphone</option>
-                            <option value="usb_mic">USB Microphone / Sound Card</option>
-                            <option value="internal_array">Internal Microphone Array</option>
+                            <option value="browser" selected>🌐 Remote Computer / Browser Microphone (Client Web Mic)</option>
+                            <option value="default">🎙️ Raspberry Pi Local Server Microphone (Default Mic)</option>
+                            <option value="usb_mic">🎙️ USB Microphone / Sound Card</option>
+                            <option value="internal_array">🎙️ Internal Microphone Array</option>
                         </select>
                         <button class="btn-preset primary" id="btnSaveMicSettings" style="padding:6px 12px; font-size:0.75rem;">Save Mic</button>
                     </div>
@@ -300,10 +301,11 @@
                     <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-orange); margin-bottom:6px;">🔊 Speaker / Audio Output Target</div>
                     <div style="display:flex; gap:6px; margin-bottom:6px;">
                         <select id="selectSpeakerSettings" style="flex:1; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
-                            <option value="default">Default System Audio Output</option>
-                            <option value="usb_speaker">USB Audio Speaker / Sound Card</option>
-                            <option value="aux_35mm">3.5mm AUX Audio Jack (Headphone Out)</option>
-                            <option value="hdmi">HDMI Audio Output</option>
+                            <option value="browser" selected>🌐 Remote Computer / Browser Audio (Client Web Audio)</option>
+                            <option value="default">🔊 Raspberry Pi Local Server Speaker (Default Audio)</option>
+                            <option value="usb_speaker">🔊 USB Audio Speaker / Sound Card</option>
+                            <option value="aux_35mm">🔊 3.5mm AUX Audio Jack (Headphone Out)</option>
+                            <option value="hdmi">🔊 HDMI Audio Output</option>
                         </select>
                         <button class="btn-preset primary" id="btnSaveSpeakerSettings" style="padding:6px 12px; font-size:0.75rem;">Save Speaker</button>
                     </div>

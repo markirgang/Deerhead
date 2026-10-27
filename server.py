@@ -164,9 +164,9 @@ HARDWARE_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 hardware_config = {
     "camera_source": "usb",
-    "mic_source": "default",
+    "mic_source": "browser",
     "mic_gain": 100,
-    "speaker_source": "default",
+    "speaker_source": "browser",
     "speaker_volume": 100
 }
 
