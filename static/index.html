@@ -345,6 +345,12 @@
                 <div style="font-size:0.78rem; color:var(--text-muted); margin-top:6px; margin-bottom:10px;">
                     Configures the Google Gemini AI key used for multimodal vision, voice conversation, and animatronic function calls.
                 </div>
+                <div style="margin-bottom:12px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid var(--border-color);">
+                    <div style="font-size:0.78rem; font-weight:bold; color:var(--accent-cyan); margin-bottom:6px;">🤖 AI Model Selection (OpenCode Go, Gemini, Ollama)</div>
+                    <select id="selectModel" style="width:100%; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border-color); padding:6px; border-radius:4px; font-size:0.78rem;">
+                    </select>
+                    <div id="aiModelHint" style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;"></div>
+                </div>
                 <div style="display:flex; gap:6px; margin-bottom:8px;">
                     <input type="password" id="inputApiKeySettings" placeholder="Enter Gemini API Key..." style="flex:1; background:var(--input-bg); color:#fff; border:1px solid var(--border-color); padding:8px 10px; border-radius:6px; font-size:0.8rem;">
                     <button class="btn-preset primary" id="btnSaveApiKeySettings" style="padding:8px 16px;">Save Key</button>
@@ -617,6 +623,7 @@
     <script src="gemini_chat.js?v=60"></script>
     <script src="dance_engine.js?v=60"></script>
     <script src="/audio_output.js?v=1"></script>
+    <script src="/ai_model_selector.js?v=1"></script>
     <script src="app.js?v=60"></script>
 </body>
 </html>
