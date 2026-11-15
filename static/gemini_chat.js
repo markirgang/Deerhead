@@ -277,19 +277,26 @@ class GeminiAIController {
                 if (vuBar) vuBar.style.width = `${scaledVol}%`;
                 if (vuVal) vuVal.textContent = `${scaledVol}%`;
 
-                // VAD Logic
+                // VAD Logic (only when listening is explicitly active)
                 if (enableRecording && this.isListening && !this.aiSpeaking) {
-                    if (scaledVol > 18) {
+                    const speechThreshold = Math.max(28, Math.round(50 - (this.micSensitivity / 100.0) * 20));
+                    if (scaledVol >= speechThreshold) {
+                        this.lastHeardVoiceAt = performance.now();
                         if (!this.isRecordingAudio) {
                             this.startAudioChunkRecording(stream);
                         }
+                        this.voicedFrames = (this.voicedFrames || 0) + 1;
                         this.speechDetected = true;
                         this.silenceStart = 0;
                     } else if (this.isRecordingAudio) {
                         if (!this.silenceStart) this.silenceStart = performance.now();
-                        if (performance.now() - this.silenceStart > 1200) {
+                        if (performance.now() - this.silenceStart > 1300) {
                             this.stopAndSendAudioChunk();
                         }
+                    } else if (this.lastHeardVoiceAt && performance.now() - this.lastHeardVoiceAt > 60000) {
+                        this.stopListening();
+                        const statusText = document.getElementById('micStatusText');
+                        if (statusText) statusText.textContent = 'Status: Standby (mic idle). Click Activate to speak.';
                     }
                 }
 
@@ -308,6 +315,8 @@ class GeminiAIController {
     startAudioChunkRecording(stream) {
         this.isRecordingAudio = true;
         this.audioChunks = [];
+        this.voicedFrames = 0;
+        this.recordingStart = performance.now();
 
         try {
             this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -322,7 +331,7 @@ class GeminiAIController {
         this.mediaRecorder.start(100);
 
         const statusText = document.getElementById('micStatusText');
-        if (statusText) statusText.textContent = 'Status: 🎙️ Listening...';
+        if (statusText) statusText.textContent = 'Status: 🎙️ Speaking...';
     }
 
     stopAndSendAudioChunk() {
@@ -330,10 +339,19 @@ class GeminiAIController {
 
         if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') return;
 
+        const duration = this.recordingStart ? (performance.now() - this.recordingStart) : 0;
+        const voiced = this.voicedFrames || 0;
+
         this.mediaRecorder.onstop = () => {
             const blob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
-            if (blob.size > 2000) {
+            // Drop audio if duration is too short (< 0.7s), size is too small (< 6500 bytes),
+            // or if there were fewer than 4 voiced frames (background noise, clicks, hum).
+            // This guarantees zero token consumption while sitting idle!
+            if (blob.size >= 6500 && duration >= 700 && voiced >= 4) {
                 this.sendVoiceBlobToGemini(blob, this.mediaRecorder.mimeType || 'audio/webm');
+            } else {
+                const statusText = document.getElementById('micStatusText');
+                if (statusText && this.isListening) statusText.textContent = 'Status: Listening for speech input...';
             }
         };
 
