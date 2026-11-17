@@ -290,7 +290,7 @@ class GeminiAIController {
                         this.silenceStart = 0;
                     } else if (this.isRecordingAudio) {
                         if (!this.silenceStart) this.silenceStart = performance.now();
-                        if (performance.now() - this.silenceStart > 2000) {
+                        if (performance.now() - this.silenceStart > 600) {
                             this.stopAndSendAudioChunk();
                         }
                     } else if (this.lastHeardVoiceAt && performance.now() - this.lastHeardVoiceAt > 60000) {
@@ -347,7 +347,7 @@ class GeminiAIController {
             // Drop audio if duration is too short (< 0.7s), size is too small (< 6500 bytes),
             // or if there were fewer than 4 voiced frames (background noise, clicks, hum).
             // This guarantees zero token consumption while sitting idle!
-            if (blob.size >= 6500 && duration >= 700 && voiced >= 4) {
+            if (blob.size >= 4000 && duration >= 400 && voiced >= 2) {
                 this.sendVoiceBlobToGemini(blob, this.mediaRecorder.mimeType || 'audio/webm');
             } else {
                 const statusText = document.getElementById('micStatusText');
@@ -375,7 +375,18 @@ class GeminiAIController {
             })
             .then(res => res.json())
             .then(data => {
-                const transcribed = data.transcription || 'Spoken Voice Input';
+                const transcribed = (data.transcription || '').trim();
+                const hasTrigger = window.AudioHardware ? window.AudioHardware.containsTriggerName(transcribed) : true;
+                const projName = window.AudioHardware ? window.AudioHardware.getProjectName() : 'robot';
+                if (this.isListening && !hasTrigger && transcribed.length > 0) {
+                    console.log(`[Voice] Ignored speech without trigger name '${projName}': "${transcribed}"`);
+                    const statusText = document.getElementById('micStatusText');
+                    if (statusText && this.isListening) {
+                        statusText.textContent = `Status: Heard "${transcribed}" — waiting for "${projName}" anywhere in sentence.`;
+                    }
+                    return;
+                }
+                const _dummyTranscribed =  'Spoken Voice Input';
                 const reply = data.text || 'No response from Gemini Voice Engine.';
 
                 const chatInput = document.getElementById('chatInput');
@@ -551,7 +562,8 @@ class GeminiAIController {
         }
 
         const encodedText = encodeURIComponent(cleanText);
-        const encodedVoice = encodeURIComponent(selectedVoiceVal);
+        const voiceVal = (window.AudioHardware ? window.AudioHardware.getVoicePreset() : selectedVoiceVal) || selectedVoiceVal || 'ai_female_us';
+        const encodedVoice = encodeURIComponent(voiceVal);
         this.audioPlayer.src = `/api/tts/speak?text=${encodedText}&voice=${encodedVoice}`;
         
         this.aiSpeaking = true;
