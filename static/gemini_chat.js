@@ -12,7 +12,7 @@ class GeminiAIController {
         this.apiKey = localStorage.getItem('GEMINI_API_KEY') || DEFAULT_GEMINI_KEY;
         this.micSensitivity = parseFloat(localStorage.getItem('MIC_SENSITIVITY')) || 100;
         this.isListening = false;
-        this.aiSpeaking = false;
+        this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false);
         this.gestureActive = true;
         
         this.audioContext = null;
@@ -290,7 +290,7 @@ class GeminiAIController {
                         this.silenceStart = 0;
                     } else if (this.isRecordingAudio) {
                         if (!this.silenceStart) this.silenceStart = performance.now();
-                        if (performance.now() - this.silenceStart > 600) {
+                        if (performance.now() - this.silenceStart > 380) {
                             this.stopAndSendAudioChunk();
                         }
                     } else if (this.lastHeardVoiceAt && performance.now() - this.lastHeardVoiceAt > 60000) {
@@ -347,7 +347,7 @@ class GeminiAIController {
             // Drop audio if duration is too short (< 0.7s), size is too small (< 6500 bytes),
             // or if there were fewer than 4 voiced frames (background noise, clicks, hum).
             // This guarantees zero token consumption while sitting idle!
-            if (blob.size >= 4000 && duration >= 400 && voiced >= 2) {
+            if (blob.size >= 2500 && duration >= 300 && voiced >= 2) {
                 this.sendVoiceBlobToGemini(blob, this.mediaRecorder.mimeType || 'audio/webm');
             } else {
                 const statusText = document.getElementById('micStatusText');
@@ -485,7 +485,7 @@ class GeminiAIController {
         };
 
         this.audioPlayer.onplay = () => {
-            this.aiSpeaking = true;
+            this.aiSpeaking = true; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(true);
             if (speakerAudioCtx && speakerAudioCtx.state === 'suspended') {
                 speakerAudioCtx.resume();
             }
@@ -493,15 +493,15 @@ class GeminiAIController {
         };
 
         this.audioPlayer.onpause = () => {
-            this.aiSpeaking = false;
+            this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false);
         };
 
         this.audioPlayer.onended = () => {
-            this.aiSpeaking = false;
+            this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false);
         };
 
         this.audioPlayer.onerror = () => {
-            this.aiSpeaking = false;
+            this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false);
         };
 
         monitorSpeakerOutput();
@@ -514,7 +514,7 @@ class GeminiAIController {
         voiceSelect.innerHTML = '';
 
         const aiVoices = [
-            { id: 'ai_female_us', label: '♀️ AI Voice - Female (US Accent)' },
+            { id: 'ai_butler_uk', label: '♀️ AI Voice - Female (US Accent)' },
             { id: 'ai_male_us', label: '♂️ AI Voice - Male (US Accent)' },
             { id: 'ai_male_uk', label: '♂️ AI Voice - Male (British Accent)' },
             { id: 'ai_female_uk', label: '♀️ AI Voice - Female (British Accent)' }
@@ -536,7 +536,7 @@ class GeminiAIController {
         if (!cleanText) return;
 
         const voiceSelect = document.getElementById('selectVoice');
-        const selectedVoiceVal = voiceSelect ? voiceSelect.value : 'ai_female_us';
+        const selectedVoiceVal = voiceSelect ? voiceSelect.value : 'ai_butler_uk';
 
         if (selectedVoiceVal.startsWith('sys_') && this.synth) {
             const sysIndex = parseInt(selectedVoiceVal.replace('sys_', ''), 10);
@@ -552,9 +552,9 @@ class GeminiAIController {
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
 
-                utterance.onstart = () => { this.aiSpeaking = true; };
-                utterance.onend = () => { this.aiSpeaking = false; };
-                utterance.onerror = () => { this.aiSpeaking = false; };
+                utterance.onstart = () => { this.aiSpeaking = true; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(true); };
+                utterance.onend = () => { this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false); };
+                utterance.onerror = () => { this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false); };
 
                 this.synth.speak(utterance);
                 return;
@@ -562,22 +562,22 @@ class GeminiAIController {
         }
 
         const encodedText = encodeURIComponent(cleanText);
-        const voiceVal = (window.AudioHardware ? window.AudioHardware.getVoicePreset() : selectedVoiceVal) || selectedVoiceVal || 'ai_female_us';
+        const voiceVal = (window.AudioHardware ? window.AudioHardware.getVoicePreset() : selectedVoiceVal) || selectedVoiceVal || 'ai_butler_uk';
         const encodedVoice = encodeURIComponent(voiceVal);
         this.audioPlayer.src = `/api/tts/speak?text=${encodedText}&voice=${encodedVoice}`;
         
-        this.aiSpeaking = true;
+        this.aiSpeaking = true; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(true);
         this.audioPlayer.play().catch(err => {
             if (this.synth) {
                 this.synth.cancel();
                 if (this.synth.paused) this.synth.resume();
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.onstart = () => { this.aiSpeaking = true; };
-                utterance.onend = () => { this.aiSpeaking = false; };
-                utterance.onerror = () => { this.aiSpeaking = false; };
+                utterance.onstart = () => { this.aiSpeaking = true; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(true); };
+                utterance.onend = () => { this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false); };
+                utterance.onerror = () => { this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false); };
                 this.synth.speak(utterance);
             } else {
-                this.aiSpeaking = false;
+                this.aiSpeaking = false; if (window.AudioHardware) window.AudioHardware.setAiSpeaking(false);
             }
         });
     }
